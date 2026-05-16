@@ -1,0 +1,80 @@
+controller:
+  type: daemonset
+
+alloy:
+  mounts:
+    varlog: true
+    dockercontainers: true
+  configMap:
+    create: true
+    content: |
+      // Discover all pods on this node and emit their logs.
+      discovery.kubernetes "pods" {
+        role = "pod"
+        selectors {
+          role  = "pod"
+          field = "spec.nodeName=" + sys.env("HOSTNAME")
+        }
+      }
+
+      // Relabel for Loki-friendly labels.
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+      }
+
+      loki.source.kubernetes "pod_logs" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.gateway.receiver]
+      }
+
+      // Receive OTLP from app pods on this node.
+      otelcol.receiver.otlp "default" {
+        grpc { endpoint = "0.0.0.0:4317" }
+        http { endpoint = "0.0.0.0:4318" }
+
+        output {
+          traces  = [otelcol.exporter.otlp.gateway.input]
+          metrics = [otelcol.exporter.otlp.gateway.input]
+          logs    = [otelcol.exporter.otlp.gateway.input]
+        }
+      }
+
+      // Forward OTLP to the gateway.
+      otelcol.exporter.otlp "gateway" {
+        client {
+          endpoint = "alloy-gateway.observability.svc.cluster.local:4317"
+          tls { insecure = true }
+        }
+      }
+
+      // Forward Loki pushes directly to Loki.
+      loki.write "gateway" {
+        endpoint {
+          url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+extraEnv:
+  - name: HOSTNAME
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
+
+service:
+  enabled: true

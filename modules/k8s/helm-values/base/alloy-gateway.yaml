@@ -1,0 +1,48 @@
+controller:
+  type: deployment
+  replicas: 1
+
+alloy:
+  configMap:
+    create: true
+    content: |
+      // Receive OTLP from DaemonSet agents.
+      otelcol.receiver.otlp "default" {
+        grpc { endpoint = "0.0.0.0:4317" }
+        http { endpoint = "0.0.0.0:4318" }
+
+        output {
+          traces  = [otelcol.processor.batch.default.input]
+          metrics = [otelcol.processor.batch.default.input]
+        }
+      }
+
+      otelcol.processor.batch "default" {
+        output {
+          traces  = [otelcol.exporter.otlp.tempo.input]
+          metrics = [otelcol.exporter.prometheus.kps.input]
+        }
+      }
+
+      // Traces -> Tempo.
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo.observability.svc.cluster.local:4317"
+          tls { insecure = true }
+        }
+      }
+
+      // OTel metrics -> Prometheus format -> remote_write to kube-prometheus-stack
+      // (Prometheus has enableRemoteWriteReceiver: true).
+      otelcol.exporter.prometheus "kps" {
+        forward_to = [prometheus.remote_write.kps.receiver]
+      }
+
+      prometheus.remote_write "kps" {
+        endpoint {
+          url = "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090/api/v1/write"
+        }
+      }
+
+service:
+  enabled: true

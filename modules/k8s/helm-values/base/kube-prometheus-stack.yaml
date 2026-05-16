@@ -1,0 +1,65 @@
+grafana:
+  enabled: true
+  service:
+    type: ClusterIP
+  adminPassword: ${grafana_admin_password}
+
+  # ADR-002: hardcoded credentials are deliberate for this academic project.
+  # The chart's assertNoLeakedSecrets check otherwise rejects explicit
+  # values.grafana.ini.database.password.
+  assertNoLeakedSecrets: false
+
+  # Persistence via RDS Postgres so dashboards survive pod restarts.
+  persistence:
+    enabled: false
+  grafana.ini:
+    database:
+      type: postgres
+      host: ${rds_endpoint}:${rds_port}
+      name: ${grafana_db_name}
+      user: ${grafana_db_user}
+      password: ${grafana_db_password}
+      ssl_mode: require
+
+  # Datasources for the full LGTM stack with log -> trace correlation.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.observability.svc.cluster.local:3100
+      jsonData:
+        derivedFields:
+          - datasourceUid: tempo
+            matcherRegex: 'trace_id=(\w+)'
+            name: TraceID
+            url: $${__value.raw}
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      access: proxy
+      url: http://tempo.observability.svc.cluster.local:3100
+      jsonData:
+        tracesToLogs:
+          datasourceUid: loki
+          tags: ['service.name', 'k8s.pod.name']
+          mappedTags:
+            - key: service.name
+              value: service
+
+prometheus:
+  prometheusSpec:
+    storageSpec: {}
+    enableFeatures:
+      - exemplar-storage
+    enableRemoteWriteReceiver: true
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+alertmanager:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true

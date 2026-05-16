@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>INFRA STATUS · auto-repair-shop · 2026-05-24</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d11;
+    --bg-2:#0d1117;
+    --surface:#11161d;
+    --surface-2:#161c25;
+    --border:#1c2530;
+    --border-strong:#2d3845;
+    --text:#e8e3d6;
+    --text-dim:#8a8f97;
+    --text-faint:#555960;
+    --green:#7cdc8a;
+    --amber:#efb55a;
+    --cyan:#73dada;
+    --red:#ec6b6b;
+    --magenta:#c886e6;
+    --indigo:#8ea0e8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:400;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(115,218,218,0.06), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(200,134,230,0.05), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+    min-height:100vh;
+    padding:48px clamp(20px, 5vw, 80px) 80px;
+    background-attachment:fixed;
+  }
+  /* subtle grid backdrop */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size:64px 64px;
+    pointer-events:none;
+    z-index:0;
+  }
+  .layout{position:relative;z-index:1;max-width:1400px;margin:0 auto}
+
+  /* ─── HEADER ─────────────────────────────────────────────────────────── */
+  .masthead{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:32px;
+    padding-bottom:32px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:48px;
+  }
+  .brand{display:flex;flex-direction:column;gap:8px}
+  .brand .eyebrow{
+    font-size:11px;
+    letter-spacing:0.22em;
+    color:var(--text-faint);
+    text-transform:uppercase;
+    font-weight:500;
+  }
+  .brand h1{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:clamp(28px,4vw,46px);
+    letter-spacing:-0.02em;
+    line-height:1.05;
+    color:var(--text);
+  }
+  .brand h1 .slash{color:var(--text-faint);font-weight:300}
+  .brand h1 .target{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-weight:400;
+    color:var(--cyan);
+    letter-spacing:0;
+  }
+  .brand .meta{
+    margin-top:6px;
+    color:var(--text-dim);
+    font-size:13px;
+  }
+  .brand .meta span + span::before{content:" · ";color:var(--text-faint);margin:0 6px}
+
+  .status-banner{
+    align-self:flex-start;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    padding:14px 18px;
+    border:1px solid rgba(124,220,138,0.35);
+    background:linear-gradient(135deg, rgba(124,220,138,0.08), rgba(124,220,138,0.02));
+    border-radius:2px;
+    min-width:260px;
+  }
+  .status-banner .label{
+    font-size:10px;
+    letter-spacing:0.22em;
+    color:var(--text-dim);
+    text-transform:uppercase;
+  }
+  .status-banner .value{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:15px;
+    font-weight:600;
+    color:var(--green);
+  }
+  .status-banner .pulse{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 0 rgba(124,220,138,0.6);
+    animation:pulse 2.4s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(124,220,138,0.55)}
+    70%{box-shadow:0 0 0 12px rgba(124,220,138,0)}
+    100%{box-shadow:0 0 0 0 rgba(124,220,138,0)}
+  }
+  .status-banner .sub{color:var(--text-dim);font-size:12px}
+
+  /* ─── KPI GRID ───────────────────────────────────────────────────────── */
+  .kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:1px;
+    margin-bottom:64px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .kpi{
+    padding:22px 22px 20px;
+    background:var(--surface);
+    display:flex;flex-direction:column;gap:6px;
+    transition:background 0.2s;
+  }
+  .kpi:hover{background:var(--surface-2)}
+  .kpi .num{
+    font-size:34px;
+    font-weight:600;
+    letter-spacing:-0.02em;
+    color:var(--text);
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .kpi .num .unit{font-size:18px;color:var(--text-dim);margin-left:4px;font-weight:400}
+  .kpi .label{
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-top:8px;
+  }
+  .kpi .hint{font-size:12px;color:var(--text-faint)}
+
+  /* ─── SECTION ────────────────────────────────────────────────────────── */
+  section.block{margin-bottom:64px}
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:18px;
+    padding-bottom:14px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--border);
+  }
+  .section-head .marker{
+    font-family:'Instrument Serif',serif;
+    font-size:36px;
+    font-style:italic;
+    color:var(--text-faint);
+    line-height:0.9;
+  }
+  .section-head h2{
+    font-size:14px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    font-weight:600;
+    color:var(--text);
+  }
+  .section-head .tag{
+    margin-left:auto;
+    font-size:11px;
+    letter-spacing:0.16em;
+    color:var(--text-faint);
+    text-transform:uppercase;
+  }
+
+  /* ─── TOPOLOGY (ASCII TREE) ──────────────────────────────────────────── */
+  .topology{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .stack{background:var(--surface);padding:24px 26px}
+  .stack header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+    padding-bottom:12px;
+    border-bottom:1px dashed var(--border-strong);
+  }
+  .stack header .env-tag{
+    font-size:11px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    padding:2px 8px;
+    border:1px solid var(--border-strong);
+    color:var(--text-dim);
+  }
+  .stack.hml header .env-tag{color:var(--indigo);border-color:rgba(142,160,232,0.5)}
+  .stack.prod header .env-tag{color:var(--magenta);border-color:rgba(200,134,230,0.5)}
+  .stack header .cidr{font-size:12px;color:var(--text-dim)}
+  .stack header .cidr code{color:var(--text)}
+  .tree{
+    font-size:12.5px;
+    line-height:1.7;
+    color:var(--text);
+    white-space:pre;
+    overflow-x:auto;
+    font-feature-settings:"ss01" 1;
+  }
+  .tree .b{color:var(--text-faint)}     /* tree branches */
+  .tree .k{color:var(--text-dim)}        /* keys */
+  .tree .v{color:var(--text)}            /* values */
+  .tree .id{color:var(--cyan)}           /* AWS IDs */
+  .tree .ok{color:var(--green)}
+  .tree .warn{color:var(--amber)}
+  .tree .group{color:var(--text);font-weight:600}
+  .tree .ip{color:var(--magenta)}
+
+  @media (max-width:1000px){
+    .topology{grid-template-columns:1fr}
+  }
+
+  /* ─── COMPARE TABLE ─────────────────────────────────────────────────── */
+  table.compare{
+    width:100%;
+    border-collapse:collapse;
+    border:1px solid var(--border);
+    background:var(--surface);
+    font-size:13px;
+    font-variant-numeric:tabular-nums;
+  }
+  table.compare th, table.compare td{
+    padding:11px 16px;
+    text-align:left;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  table.compare th{
+    font-weight:500;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    background:var(--bg-2);
+  }
+  table.compare th.env-hml{color:var(--indigo)}
+  table.compare th.env-prod{color:var(--magenta)}
+  table.compare td.k{color:var(--text-dim)}
+  table.compare tr:last-child td{border-bottom:none}
+  table.compare tr:hover td{background:var(--surface-2)}
+  table.compare code{
+    color:var(--cyan);
+    font-size:12.5px;
+  }
+
+  /* ─── WORKLOADS GRID ────────────────────────────────────────────────── */
+  .workloads{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+  }
+  .ns-card{background:var(--surface);padding:22px 24px}
+  .ns-card h3{
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--text);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .ns-card .ns-meta{
+    font-size:11px;
+    color:var(--text-faint);
+    margin-bottom:18px;
+    letter-spacing:0.04em;
+  }
+  .ns-card ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .ns-card li{
+    display:grid;
+    grid-template-columns:18px 1fr auto;
+    gap:10px;
+    align-items:baseline;
+    font-size:13px;
+  }
+  .ns-card .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--green);
+    margin-top:7px;
+    box-shadow:0 0 6px rgba(124,220,138,0.4);
+  }
+  .ns-card .name{color:var(--text)}
+  .ns-card .name .qual{color:var(--text-faint)}
+  .ns-card .qty{
+    color:var(--text-dim);
+    font-size:11px;
+    letter-spacing:0.06em;
+  }
+  @media (max-width:900px){.workloads{grid-template-columns:1fr}}
+
+  /* ─── NOTES ─────────────────────────────────────────────────────────── */
+  .notes{display:flex;flex-direction:column;gap:14px}
+  .note{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:18px;
+    padding:18px 22px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:2px solid var(--amber);
+  }
+  .note.ok{border-left-color:var(--green)}
+  .note.info{border-left-color:var(--cyan)}
+  .note.warn{border-left-color:var(--amber)}
+  .note .icon{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-size:24px;
+    line-height:1;
+    color:var(--text-faint);
+  }
+  .note .body{display:flex;flex-direction:column;gap:6px}
+  .note .body strong{
+    color:var(--text);
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.02em;
+  }
+  .note .body p{color:var(--text-dim);font-size:12.5px;line-height:1.6}
+  .note .body code{color:var(--cyan);font-size:12px}
+  .note .tag{
+    font-size:10px;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    align-self:start;
+    padding-top:2px;
+  }
+  .note.ok .tag{color:var(--green)}
+  .note.warn .tag{color:var(--amber)}
+  .note.info .tag{color:var(--cyan)}
+
+  /* ─── FOOTER ────────────────────────────────────────────────────────── */
+  footer.colophon{
+    margin-top:80px;
+    padding-top:24px;
+    border-top:1px solid var(--border);
+    display:flex;
+    flex-wrap:wrap;
+    gap:24px;
+    align-items:baseline;
+    justify-content:space-between;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+  }
+  footer.colophon .sig{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-size:14px;
+    text-transform:none;
+    letter-spacing:0;
+    color:var(--text-dim);
+  }
+
+  /* ─── STAGGERED REVEAL ──────────────────────────────────────────────── */
+  .reveal{opacity:0;transform:translateY(8px);animation:rise 0.7s cubic-bezier(.2,.7,.2,1) forwards}
+  .reveal:nth-child(1){animation-delay:0.05s}
+  .reveal:nth-child(2){animation-delay:0.12s}
+  .reveal:nth-child(3){animation-delay:0.19s}
+  .reveal:nth-child(4){animation-delay:0.26s}
+  .reveal:nth-child(5){animation-delay:0.33s}
+  .reveal:nth-child(6){animation-delay:0.40s}
+  .reveal:nth-child(7){animation-delay:0.47s}
+  .reveal:nth-child(8){animation-delay:0.54s}
+  @keyframes rise{to{opacity:1;transform:translateY(0)}}
+
+  /* ─── UTILITIES ─────────────────────────────────────────────────────── */
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:2px 8px;
+    border:1px solid var(--border-strong);
+    border-radius:2px;
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--text-dim);
+  }
+  .chip.ok{color:var(--green);border-color:rgba(124,220,138,0.4)}
+  .chip.warn{color:var(--amber);border-color:rgba(239,181,90,0.4)}
+  .chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:#3a4654}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ───────── MASTHEAD ───────── -->
+  <header class="masthead">
+    <div class="brand">
+      <div class="eyebrow">Terraform · AWS Academy · 2026-05-24</div>
+      <h1>infra status<span class="slash"> /</span> <span class="target">auto-repair-shop</span></h1>
+      <div class="meta">
+        <span>AWS Account 470804328092</span>
+        <span>us-east-1</span>
+        <span>Deploy concluído 04:38 UTC</span>
+      </div>
+    </div>
+    <div class="status-banner">
+      <span class="label">Pipeline · run 26351191534</span>
+      <span class="value"><span class="pulse"></span>HML &nbsp;✓ &nbsp; PROD &nbsp;✓</span>
+      <span class="sub">deploy-hml 18m22s · deploy-prod 19m22s</span>
+    </div>
+  </header>
+
+  <!-- ───────── KPI ROW ───────── -->
+  <section class="kpis">
+    <div class="kpi reveal">
+      <div class="num">2<span class="unit">envs</span></div>
+      <div class="label">Ambientes</div>
+      <div class="hint">hml · prod</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">2<span class="unit">clusters</span></div>
+      <div class="label">EKS</div>
+      <div class="hint">k8s 1.32 · active</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">4<span class="unit">nodes</span></div>
+      <div class="label">Worker</div>
+      <div class="hint">t3.medium · hop=2</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">2<span class="unit">rds</span></div>
+      <div class="label">Postgres 16.14</div>
+      <div class="hint">db.t3.micro · available</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">16<span class="unit">helm</span></div>
+      <div class="label">Releases</div>
+      <div class="hint">8 por cluster</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">5<span class="unit">s3</span></div>
+      <div class="label">Buckets</div>
+      <div class="hint">tfstate + loki/tempo×2</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">4<span class="unit">sec</span></div>
+      <div class="label">Secrets Manager</div>
+      <div class="hint">db-master + db-app × env</div>
+    </div>
+    <div class="kpi reveal">
+      <div class="num">0<span class="unit">drift</span></div>
+      <div class="label">Pós-fix</div>
+      <div class="hint">node_group LT corrigido</div>
+    </div>
+  </section>
+
+  <!-- ───────── TOPOLOGY ───────── -->
+  <section class="block">
+    <div class="section-head">
+      <span class="marker">i.</span>
+      <h2>Topologia</h2>
+      <span class="tag">terraform-driven inventory</span>
+    </div>
+    <div class="topology">
+
+      <div class="stack hml">
+        <header>
+          <span class="env-tag">HML</span>
+          <span class="cidr"><code>10.0.0.0/16</code> · vpc-038f9189c88da5525</span>
+        </header>
+<pre class="tree"><span class="group">auto-repair-shop · hml</span>
+<span class="b">├─</span> <span class="k">vpc       </span> <span class="id">vpc-038f9189c88da5525</span>  <span class="v">10.0.0.0/16</span>
+<span class="b">│  ├─</span> <span class="k">subnets </span> <span class="v">2 públicas + 2 privadas</span>  <span class="k">(us-east-1a/b)</span>
+<span class="b">│  ├─</span> <span class="k">igw     </span> <span class="ok">✓</span>
+<span class="b">│  ├─</span> <span class="k">nat     </span> <span class="id">nat-0ce67ffcdcfb36867</span>   <span class="ip">52.21.174.183</span>
+<span class="b">│  └─</span> <span class="k">sg      </span> <span class="v">db-sg</span> · <span class="v">lambda-sg</span>
+<span class="b">├─</span> <span class="k">eks       </span> <span class="id">auto-repair-shop-hml-cluster</span>
+<span class="b">│  ├─</span> <span class="k">version </span> <span class="v">k8s 1.32</span>  <span class="ok">ACTIVE</span>
+<span class="b">│  ├─</span> <span class="k">ng      </span> <span class="v">2× t3.medium</span>  <span class="k">scaling 1/2/3</span>
+<span class="b">│  ├─</span> <span class="k">lt      </span> <span class="id">lt-0f96ad626d92c1a22</span>  <span class="k">v1</span>
+<span class="b">│  └─</span> <span class="k">imds    </span> <span class="v">hop_limit=2</span>  <span class="ok">✓ pods → LabRole</span>
+<span class="b">├─</span> <span class="k">rds       </span> <span class="id">auto-repair-shop-hml-db</span>
+<span class="b">│  ├─</span> <span class="k">engine  </span> <span class="v">PostgreSQL 16.14</span>
+<span class="b">│  ├─</span> <span class="k">class   </span> <span class="v">db.t3.micro</span>  <span class="k">20 GB gp3 → 100 GB</span>
+<span class="b">│  ├─</span> <span class="k">access  </span> <span class="v">privado</span> (eks-sg + lambda-sg :5432)
+<span class="b">│  └─</span> <span class="k">status  </span> <span class="ok">available</span>
+<span class="b">├─</span> <span class="k">s3        </span>
+<span class="b">│  ├─</span> <span class="id">auto-repair-shop-hml-loki-470804328092</span>   <span class="k">lifecycle 7d</span>
+<span class="b">│  └─</span> <span class="id">auto-repair-shop-hml-tempo-470804328092</span>  <span class="k">lifecycle 3d</span>
+<span class="b">├─</span> <span class="k">secrets   </span>
+<span class="b">│  ├─</span> <span class="v">auto-repair-shop/hml/db-master</span>
+<span class="b">│  └─</span> <span class="v">auto-repair-shop/hml/db-app</span>
+<span class="b">├─</span> <span class="k">ssm       </span>
+<span class="b">│  ├─</span> <span class="v">/auto-repair-shop/hml/eks/cluster-name</span>
+<span class="b">│  └─</span> <span class="v">/auto-repair-shop/hml/db/secret-arn</span>
+<span class="b">└─</span> <span class="k">tfstate   </span> <span class="v">s3://…tfstate/hml/terraform.tfstate</span>  <span class="k">04:18 UTC · 248 KB</span>
+</pre>
+      </div>
+
+      <div class="stack prod">
+        <header>
+          <span class="env-tag">PROD</span>
+          <span class="cidr"><code>10.1.0.0/16</code> · vpc-00b37708213cb10ad</span>
+        </header>
+<pre class="tree"><span class="group">auto-repair-shop · prod</span>
+<span class="b">├─</span> <span class="k">vpc       </span> <span class="id">vpc-00b37708213cb10ad</span>  <span class="v">10.1.0.0/16</span>
+<span class="b">│  ├─</span> <span class="k">subnets </span> <span class="v">2 públicas + 2 privadas</span>  <span class="k">(us-east-1a/b)</span>
+<span class="b">│  ├─</span> <span class="k">igw     </span> <span class="ok">✓</span>
+<span class="b">│  ├─</span> <span class="k">nat     </span> <span class="id">nat-041c0f54dddf4dc06</span>   <span class="ip">18.209.251.22</span>
+<span class="b">│  └─</span> <span class="k">sg      </span> <span class="v">db-sg</span> · <span class="v">lambda-sg</span>
+<span class="b">├─</span> <span class="k">eks       </span> <span class="id">auto-repair-shop-prod-cluster</span>
+<span class="b">│  ├─</span> <span class="k">version </span> <span class="v">k8s 1.32</span>  <span class="ok">ACTIVE</span>
+<span class="b">│  ├─</span> <span class="k">ng      </span> <span class="v">2× t3.medium</span>  <span class="k">scaling 2/2/4</span>
+<span class="b">│  ├─</span> <span class="k">lt      </span> <span class="id">lt-0d0f02ba07e243c11</span>  <span class="k">v1</span>
+<span class="b">│  └─</span> <span class="k">imds    </span> <span class="v">hop_limit=2</span>  <span class="ok">✓ pods → LabRole</span>
+<span class="b">├─</span> <span class="k">rds       </span> <span class="id">auto-repair-shop-prod-db</span>
+<span class="b">│  ├─</span> <span class="k">engine  </span> <span class="v">PostgreSQL 16.14</span>
+<span class="b">│  ├─</span> <span class="k">class   </span> <span class="v">db.t3.micro</span>  <span class="k">20 GB gp3 → 100 GB</span>
+<span class="b">│  ├─</span> <span class="k">access  </span> <span class="v">privado</span> (eks-sg + lambda-sg :5432)
+<span class="b">│  └─</span> <span class="k">status  </span> <span class="ok">available</span>
+<span class="b">├─</span> <span class="k">s3        </span>
+<span class="b">│  ├─</span> <span class="id">auto-repair-shop-prod-loki-470804328092</span>   <span class="k">lifecycle 30d</span>
+<span class="b">│  └─</span> <span class="id">auto-repair-shop-prod-tempo-470804328092</span>  <span class="k">lifecycle 14d</span>
+<span class="b">├─</span> <span class="k">secrets   </span>
+<span class="b">│  ├─</span> <span class="v">auto-repair-shop/prod/db-master</span>
+<span class="b">│  └─</span> <span class="v">auto-repair-shop/prod/db-app</span>
+<span class="b">├─</span> <span class="k">ssm       </span>
+<span class="b">│  ├─</span> <span class="v">/auto-repair-shop/prod/eks/cluster-name</span>
+<span class="b">│  └─</span> <span class="v">/auto-repair-shop/prod/db/secret-arn</span>
+<span class="b">└─</span> <span class="k">tfstate   </span> <span class="v">s3://…tfstate/prod/terraform.tfstate</span>  <span class="k">04:38 UTC · 248 KB</span>
+</pre>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ───────── COMPARE TABLE ───────── -->
+  <section class="block">
+    <div class="section-head">
+      <span class="marker">ii.</span>
+      <h2>HML vs PROD</h2>
+      <span class="tag">diferenças intencionais</span>
+    </div>
+    <table class="compare">
+      <thead>
+        <tr>
+          <th style="width:200px">Atributo</th>
+          <th class="env-hml">HML</th>
+          <th class="env-prod">PROD</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="k">VPC CIDR</td><td><code>10.0.0.0/16</code></td><td><code>10.1.0.0/16</code></td></tr>
+        <tr><td class="k">NAT public IP</td><td><code>52.21.174.183</code></td><td><code>18.209.251.22</code></td></tr>
+        <tr><td class="k">Node scaling (min/desired/max)</td><td>1 / 2 / 3</td><td>2 / 2 / 4</td></tr>
+        <tr><td class="k">Loki S3 retention</td><td>7 dias</td><td>30 dias</td></tr>
+        <tr><td class="k">Tempo S3 retention</td><td>3 dias</td><td>14 dias</td></tr>
+        <tr><td class="k">tfstate commit</td><td>04:18 UTC · 248 211 B</td><td>04:38 UTC · 248 391 B</td></tr>
+        <tr><td class="k">Job db-init</td><td><span class="chip ok"><span class="dot"></span>Completed</span></td><td><span class="chip ok"><span class="dot"></span>Completed</span></td></tr>
+        <tr><td class="k">Helm releases (kube-system + observability)</td><td>1 + 7</td><td>1 + 7</td></tr>
+        <tr><td class="k">Pods em <code>observability</code></td><td>15 Running</td><td>15 Running</td></tr>
+        <tr><td class="k">App namespace</td><td><code>auto-repair-shop-hml</code></td><td><code>auto-repair-shop-prod</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ───────── WORKLOADS ───────── -->
+  <section class="block">
+    <div class="section-head">
+      <span class="marker">iii.</span>
+      <h2>Workloads Kubernetes</h2>
+      <span class="tag">idêntico em hml e prod</span>
+    </div>
+    <div class="workloads">
+      <div class="ns-card">
+        <h3>namespace · observability</h3>
+        <div class="ns-meta">7 helm releases · 15 pods running</div>
+        <ul>
+          <li><span class="dot"></span><span class="name">kube-prometheus-stack <span class="qual">85.1.3</span></span><span class="qty">grafana · prom · alertmgr</span></li>
+          <li><span class="dot"></span><span class="name">loki <span class="qual">6.55.0</span></span><span class="qty">single-binary · s3</span></li>
+          <li><span class="dot"></span><span class="name">tempo <span class="qual">1.24.4</span></span><span class="qty">s3 backend</span></li>
+          <li><span class="dot"></span><span class="name">alloy-daemonset <span class="qual">1.8.1</span></span><span class="qty">2 pods (1/node)</span></li>
+          <li><span class="dot"></span><span class="name">alloy-gateway <span class="qual">1.8.1</span></span><span class="qty">otlp gateway</span></li>
+          <li><span class="dot"></span><span class="name">opentelemetry-operator <span class="qual">0.75.0</span></span><span class="qty">instr CRD provider</span></li>
+          <li><span class="dot"></span><span class="name">blackbox-exporter <span class="qual">8.17.0</span></span><span class="qty">probes</span></li>
+        </ul>
+      </div>
+
+      <div class="ns-card">
+        <h3>namespace · kube-system &amp; app</h3>
+        <div class="ns-meta">1 helm release · core add-ons · app SA + db-init</div>
+        <ul>
+          <li><span class="dot"></span><span class="name">aws-load-balancer-controller <span class="qual">1.7.2</span></span><span class="qty">2 replicas · ingressClass=alb</span></li>
+          <li><span class="dot"></span><span class="name">aws-node (vpc-cni)</span><span class="qty">daemonset · 2 pods</span></li>
+          <li><span class="dot"></span><span class="name">coredns</span><span class="qty">2 replicas</span></li>
+          <li><span class="dot"></span><span class="name">kube-proxy</span><span class="qty">daemonset</span></li>
+          <li><span class="dot"></span><span class="name">sa <span class="qual">auto-repair-shop</span></span><span class="qty">eks.amazonaws.com/role-arn=LabRole</span></li>
+          <li><span class="dot"></span><span class="name">job <span class="qual">db-init</span></span><span class="qty">Completed · DBs + roles criados</span></li>
+          <li><span class="dot"></span><span class="name">instrumentation <span class="qual">auto-repair-shop</span></span><span class="qty">→ alloy-daemonset:4318</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── NOTES ───────── -->
+  <section class="block">
+    <div class="section-head">
+      <span class="marker">iv.</span>
+      <h2>Pontos de atenção</h2>
+      <span class="tag">pós-deploy</span>
+    </div>
+    <div class="notes">
+
+      <div class="note ok">
+        <span class="icon">✓</span>
+        <div class="body">
+          <strong>Drift cosmético do node group · corrigido</strong>
+          <p>
+            <code>modules/eks/main.tf</code> tinha <code>version = "$Latest"</code> no <code>launch_template</code> do node group.
+            A AWS resolvia para <code>"1"</code> no state e cada plan reaparecia como <em>modify in-place</em> no-op.
+            Substituído por <code>aws_launch_template.node.latest_version</code> — próximo plan fica clean.
+          </p>
+        </div>
+        <span class="tag">fix</span>
+      </div>
+
+      <div class="note info">
+        <span class="icon">i</span>
+        <div class="body">
+          <strong>README reescrito refletindo a estrutura atual</strong>
+          <p>
+            A versão antiga descrevia 3 sub-projetos top-level (<code>vpc/</code>, <code>k8s/</code>, <code>db/</code>) com <code>terraform_remote_state</code>.
+            O repo já está em um <em>root por ambiente</em> (<code>hml/</code> · <code>prod/</code>) consumindo módulos compartilhados em <code>modules/{vpc,eks,rds,db,k8s}</code>.
+          </p>
+        </div>
+        <span class="tag">docs</span>
+      </div>
+
+      <div class="note info">
+        <span class="icon">i</span>
+        <div class="body">
+          <strong>Memória de Loki atualizada</strong>
+          <p>
+            Diretriz antiga dizia <code>Do not enable lokiCanary</code>. O helm-values atual tem <code>lokiCanary.enabled: true</code> e está estável
+            (2 pods, 0 restarts em ambos clusters). Memória <code>project-loki-config</code> agora reflete a realidade.
+          </p>
+        </div>
+        <span class="tag">memory</span>
+      </div>
+
+      <div class="note warn">
+        <span class="icon">!</span>
+        <div class="body">
+          <strong>Sem Ingress nem ALB ainda — esperado</strong>
+          <p>
+            ALB Controller está deployed em <code>kube-system</code>, mas nenhuma app ainda criou Ingress.
+            Resultado: <code>aws elbv2 describe-load-balancers</code> retorna vazio. É o estado pretendido pra esse momento do ciclo.
+          </p>
+        </div>
+        <span class="tag">esperado</span>
+      </div>
+
+      <div class="note warn">
+        <span class="icon">!</span>
+        <div class="body">
+          <strong>SSM placeholders forward-looking</strong>
+          <p>
+            Deploy da app espera <code>/auto-repair-shop/{env}/sns/events-topic-arn</code> e <code>/auto-repair-shop/{env}/apigw/endpoint</code>.
+            Esses params <em>ainda não são publicados</em> — vão sair dos módulos SNS / API Gateway quando existirem.
+            Sem eles, o pipeline do <code>auto-repair-shop</code> falha.
+          </p>
+        </div>
+        <span class="tag">pendente</span>
+      </div>
+
+      <div class="note ok">
+        <span class="icon">✓</span>
+        <div class="body">
+          <strong>Limpeza: nada sobrando na conta</strong>
+          <p>
+            0 EBS órfãos · 0 LBs órfãos · 0 VPC endpoints inesperados · 2 EIPs ambas em uso ·
+            4 ENIs do EKS todas <code>in-use</code> · 2 launch templates (1 por cluster, v1 única, hop_limit=2 ✓) ·
+            sem IAM roles custom (esperado em AWS Academy — apenas LabRole).
+          </p>
+        </div>
+        <span class="tag">clean</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ───────── FOOTER ───────── -->
+  <footer class="colophon">
+    <div>Run · <span style="color:var(--cyan)">26351191534</span> · ubuntu-latest · main</div>
+    <div class="sig">A snapshot — read against <code>git log</code> for truth.</div>
+    <div>Gerado · 2026-05-24</div>
+  </footer>
+
+</div>
+</body>
+</html>

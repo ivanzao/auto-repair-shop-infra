@@ -1,0 +1,9 @@
+output "vpc_id" { value = module.vpc.vpc_id }
+output "eks_cluster_name" { value = module.eks.cluster_name }
+output "eks_cluster_endpoint" { value = module.eks.cluster_endpoint }
+output "rds_endpoint" { value = module.rds.rds_endpoint }
+output "secret_arn_master" { value = module.rds.secret_arn_master }
+output "secret_arn_app" { value = module.db.secret_arn_app }
+output "arc_runner_set_name" { value = module.k8s.arc_runner_set_name }
+output "private_subnet_ids" { value = module.vpc.private_subnet_ids }
+output "lambda_sg_id" { value = module.vpc.lambda_sg_id }
