@@ -10,7 +10,6 @@ module "eks" {
   source             = "../modules/eks"
   environment        = "hml"
   cluster_name       = "auto-repair-shop-hml-cluster"
-  vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
   public_subnet_ids  = module.vpc.public_subnet_ids
   node_instance_type = var.node_instance_type
@@ -49,7 +48,6 @@ module "db" {
   depends_on = [module.rds]
 }
 
-# Applied in full deploy (after bootstrap installs operator + CRD via module.k8s)
 resource "kubernetes_manifest" "otel_instrumentation" {
   manifest = {
     apiVersion = "opentelemetry.io/v1alpha1"
@@ -112,6 +110,7 @@ module "registry" {
 module "gateway" {
   source                = "../modules/gateway"
   environment           = "hml"
+  aws_region            = var.aws_region
   private_subnet_ids    = module.vpc.private_subnet_ids
   lambda_sg_id          = module.vpc.lambda_sg_id
   eks_cluster_sg_id     = module.eks.cluster_sg_id
@@ -126,6 +125,7 @@ module "gateway" {
 module "messaging" {
   source                = "../modules/messaging"
   environment           = "hml"
+  aws_region            = var.aws_region
   private_subnet_ids    = module.vpc.private_subnet_ids
   lambda_sg_id          = module.vpc.lambda_sg_id
   ecr_repository_prefix = module.registry.ecr_repository_prefix

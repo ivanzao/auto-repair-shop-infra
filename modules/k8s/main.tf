@@ -10,8 +10,6 @@ locals {
   }
 }
 
-# ─── Namespaces ───────────────────────────────────────────────────────────────
-
 resource "kubernetes_namespace" "app" {
   metadata {
     name   = local.app_namespace
@@ -25,11 +23,6 @@ resource "kubernetes_namespace" "observability" {
     labels = { app = "observability" }
   }
 }
-
-# ─── App service account ──────────────────────────────────────────────────────
-# AWS Academy doesn't permit iam:AttachRolePolicy on LabRole. The pod inherits
-# credentials from the node IAM (LabRole + VocLabPolicy*), so SNS publish works
-# without an explicit IRSA policy attachment.
 
 resource "kubernetes_service_account" "app" {
   metadata {

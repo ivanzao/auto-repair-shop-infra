@@ -1,7 +1,3 @@
-# AWS Academy doesn't permit iam:CreatePolicy/AttachRolePolicy on LabRole.
-# The controller inherits the node IAM (LabRole + VocLabPolicy*), which already
-# covers EC2/ELB actions needed by the load balancer controller.
-
 resource "kubernetes_service_account" "alb_controller" {
   metadata {
     name      = "aws-load-balancer-controller"

@@ -1,9 +1,3 @@
-// Idempotent DB initialization via Kubernetes Job.
-// Replaces the postgresql Terraform provider approach (which required VPC
-// access to RDS — only possible from ARC runner inside the VPC).
-// The Job runs in-cluster, can reach the private RDS endpoint, and uses
-// IF NOT EXISTS-style SQL so reruns are safe.
-
 resource "kubernetes_secret" "db_init_credentials" {
   metadata {
     name      = "db-init-credentials"

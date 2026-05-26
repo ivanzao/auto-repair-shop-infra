@@ -1,6 +1,0 @@
-serviceMonitor:
-  targets:
-    - name: auto-repair-shop
-      url: http://auto-repair-shop.auto-repair-shop-hml.svc.cluster.local/health
-      interval: 30s
-      scrapeTimeout: 10s

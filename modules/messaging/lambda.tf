@@ -1,10 +1,3 @@
-# Email Lambda: SQS consumer that sends quote emails via MailerSend.
-#
-# Same pattern as modules/gateway/lambda.tf: Container image via ECR PTC,
-# requires PTC cache warm before creation. lambdas pipeline owns runtime
-# lifecycle (image_uri + environment) via update-function-code +
-# update-function-configuration after each push.
-
 resource "aws_lambda_function" "email" {
   function_name                  = "auto-repair-shop-email-${var.environment}"
   package_type                   = "Image"

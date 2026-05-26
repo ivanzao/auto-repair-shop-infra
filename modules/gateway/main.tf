@@ -13,7 +13,5 @@ locals {
     ManagedBy   = "terraform"
   }
 
-  # ECR PTC URL prefix that maps to ghcr.io/<owner>. Lambda image_uri is
-  # built as: <this>/auto-repair-shop-<lambda>:<env>
   ghcr_ecr_base = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.ecr_repository_prefix}/${var.ghcr_owner}"
 }

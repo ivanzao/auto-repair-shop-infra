@@ -8,11 +8,6 @@ variable "cluster_name" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC ID where the cluster is deployed"
-  type        = string
-}
-
 variable "private_subnet_ids" {
   description = "Private subnet IDs for EKS node groups"
   type        = list(string)

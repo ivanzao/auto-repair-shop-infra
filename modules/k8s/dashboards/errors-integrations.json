@@ -1,0 +1,155 @@
+{
+  "uid": "auto-repair-errors",
+  "title": "Auto Repair Shop — Errors & Integrations",
+  "tags": ["auto-repair-shop", "errors"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus"
+      },
+      {
+        "name": "loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "5xx (req/s)",
+      "id": 1,
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "4xx (req/s)",
+      "id": 2,
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"4..\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "stat",
+      "title": "App pods restarting (1h)",
+      "id": 3,
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"auto-repair-shop-.*\"}[1h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Erro logs (5m)",
+      "id": 4,
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "loki", "uid": "$loki" },
+      "targets": [
+        {
+          "expr": "sum(count_over_time({service=\"auto-repair-shop\"} |= `\"level\":\"ERROR\"` [5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Status codes 4xx/5xx ao longo do tempo",
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"[45]..\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Volume de logs por nível",
+      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "loki", "uid": "$loki" },
+      "targets": [
+        {
+          "expr": "sum by (level) (rate({service=\"auto-repair-shop\"} | json | __error__=\"\" [5m]))",
+          "refId": "A",
+          "legendFormat": "{{level}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "logs",
+      "title": "Últimos erros (Loki)",
+      "id": 7,
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "loki", "uid": "$loki" },
+      "targets": [
+        {
+          "expr": "{service=\"auto-repair-shop\"} |= `\"level\":\"ERROR\"`",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}

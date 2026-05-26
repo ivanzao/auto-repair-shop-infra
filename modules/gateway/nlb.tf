@@ -34,8 +34,9 @@ resource "aws_lb_target_group" "app" {
 }
 
 resource "aws_autoscaling_attachment" "app" {
-  count                  = length(var.node_group_asg_names)
-  autoscaling_group_name = var.node_group_asg_names[count.index]
+  for_each = toset(var.node_group_asg_names)
+
+  autoscaling_group_name = each.key
   lb_target_group_arn    = aws_lb_target_group.app.arn
 }
 

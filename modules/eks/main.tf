@@ -9,7 +9,7 @@ locals {
   }
 }
 
-resource "aws_eks_cluster" "main" {
+resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
   role_arn = local.lab_role_arn
   version  = "1.32"
@@ -24,8 +24,6 @@ resource "aws_eks_cluster" "main" {
   tags = local.common_tags
 }
 
-# Custom launch template solely to raise IMDS hop limit to 2.
-# Pods need this to reach 169.254.169.254 and inherit LabRole creds.
 resource "aws_launch_template" "node" {
   name_prefix = "${var.cluster_name}-node-"
 
@@ -46,7 +44,7 @@ resource "aws_launch_template" "node" {
 }
 
 resource "aws_eks_node_group" "default" {
-  cluster_name    = aws_eks_cluster.main.name
+  cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${var.cluster_name}-default"
   node_role_arn   = local.lab_role_arn
   subnet_ids      = var.private_subnet_ids
@@ -67,5 +65,5 @@ resource "aws_eks_node_group" "default" {
 
   tags = local.common_tags
 
-  depends_on = [aws_eks_cluster.main]
+  depends_on = [aws_eks_cluster.this]
 }

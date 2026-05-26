@@ -9,9 +9,6 @@ resource "helm_release" "otel_operator" {
 
   values = [file("${path.module}/helm-values/base/otel-operator.yaml")]
 
-  # AlbController has a mutating webhook on Services. If it isn't ready when
-  # the OTel operator chart creates its webhook Service, the chart install
-  # fails on first-time cluster bootstrap.
   depends_on = [
     kubernetes_namespace.observability,
     helm_release.alb_controller,
@@ -27,11 +24,6 @@ resource "helm_release" "kube_prometheus_stack" {
   create_namespace = false
   timeout          = 1200
 
-  # Grafana depends on grafana_<env> Postgres user, which is created by
-  # module.db in init-database-hml (stage 2 on the ARC runner). Stage 1 deploys
-  # this chart before that user exists, so Grafana CrashLoops. wait=false lets
-  # terraform mark the release deployed even with unready pods; Grafana
-  # auto-recovers once stage 2 finishes.
   wait = false
 
   values = [
@@ -43,6 +35,7 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana_db_user        = local.grafana_db_user
       grafana_db_password    = var.grafana_db_password
     }),
+    file("${path.module}/helm-values/base/alerts.yaml"),
     file("${path.module}/helm-values/${var.environment}/kube-prometheus-stack.yaml"),
   ]
 
@@ -61,7 +54,6 @@ resource "helm_release" "loki" {
   create_namespace = false
   timeout          = 600
 
-  # Pod budget tight on first deploy; allow async pod readiness.
   wait = false
 
   values = [
@@ -141,19 +133,3 @@ resource "helm_release" "alloy_gateway" {
   ]
 }
 
-resource "helm_release" "blackbox_exporter" {
-  name             = "blackbox-exporter"
-  repository       = "https://prometheus-community.github.io/helm-charts"
-  chart            = "prometheus-blackbox-exporter"
-  version          = "8.17.0"
-  namespace        = "observability"
-  create_namespace = false
-  timeout          = 300
-
-  values = [
-    file("${path.module}/helm-values/base/blackbox-exporter.yaml"),
-    file("${path.module}/helm-values/${var.environment}/blackbox-exporter.yaml"),
-  ]
-
-  depends_on = [helm_release.alloy_gateway]
-}

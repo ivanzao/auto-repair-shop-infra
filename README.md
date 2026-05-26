@@ -36,31 +36,38 @@ O **two-pass apply** é necessário porque o provider `kubernetes_manifest` prec
 
 O workflow `deploy.yaml` já cria o bucket no primeiro run se ele não existir (`aws s3api head-bucket || create + enable versioning + encryption`). Não há script separado.
 
-## Outputs SSM (consumidos por aplicações)
+## SSM Parameter Store — Contrato de Integração
 
-Publicados em `hml/ssm.tf` e `prod/ssm.tf`:
+As aplicações consomem outputs da infra via SSM Parameter Store, não via
+`terraform_remote_state`. Isso desacopla o ciclo de deploy das aplicações
+do estado do Terraform.
 
-| Param | Conteúdo |
-|-------|----------|
-| `/auto-repair-shop/{hml,prod}/eks/cluster-name` | Nome do cluster EKS (pra `aws eks update-kubeconfig` no CI das apps) |
-| `/auto-repair-shop/{hml,prod}/db/secret-arn` | ARN do Secrets Manager — JSON com `host`, `port`, `dbname`, `username`, `password` do app DB |
+**Padrão de nomes:** `/auto-repair-shop/<env>/<recurso>/<atributo>`
 
-Apps que precisarem das credenciais do DB devem ler o ARN no SSM e fazer `aws secretsmanager get-secret-value` pra extrair o JSON. **Não publicamos host/dbname/username separadamente em SSM** — tudo vive no JSON do Secrets Manager pra evitar drift.
+| Parâmetro | Publicado por | Conteúdo |
+|-----------|--------------|----------|
+| `/auto-repair-shop/{env}/eks/cluster-name` | `hml/ssm.tf`, `prod/ssm.tf` | Nome do cluster EKS |
+| `/auto-repair-shop/{env}/db/secret-arn` | `hml/ssm.tf`, `prod/ssm.tf` | ARN do secret de credenciais da app (JSON com host, port, dbname, username, password) |
+| `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
+| `/auto-repair-shop/{env}/apigw/api-id` | `modules/gateway` | ID do HTTP API |
+| `/auto-repair-shop/{env}/apigw/vpc-link-id` | `modules/gateway` | ID do VPC Link |
+| `/auto-repair-shop/{env}/apigw/execution-arn` | `modules/gateway` | Execution ARN (para Lambda permissions) |
+| `/auto-repair-shop/{env}/apigw/private-listener-arn` | `modules/gateway` | ARN do listener do NLB interno |
+| `/auto-repair-shop/{env}/alb/app-target-group-arn` | `modules/gateway` | ARN do Target Group da app (CRD TargetGroupBinding exige ARN) |
+| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` | ARN do tópico SNS de eventos |
+| `/auto-repair-shop/{env}/sqs/email-queue-arn` | `modules/messaging` | ARN da fila SQS de emails |
 
-**Outros params SSM consumidos pelas apps**:
+**Não publicamos** host/dbname/username separadamente em SSM — tudo vive no JSON do Secrets Manager para evitar drift. O deploy da app assume que esses parâmetros existem — sem eles o pipeline falha.
 
-| Param | Publicado por |
-|-------|---------------|
-| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` |
-| `/auto-repair-shop/{env}/sqs/email-queue-arn`  | `modules/messaging` |
-| `/auto-repair-shop/{env}/apigw/endpoint`       | `modules/gateway`   |
-| `/auto-repair-shop/{env}/apigw/api-id`         | `modules/gateway`   |
-| `/auto-repair-shop/{env}/apigw/vpc-link-id`    | `modules/gateway`   |
-| `/auto-repair-shop/{env}/apigw/execution-arn`  | `modules/gateway`   |
-| `/auto-repair-shop/{env}/apigw/private-listener-arn` | `modules/gateway` |
-| `/auto-repair-shop/{env}/alb/app-target-group-arn`   | `modules/gateway` (consumido pelo `TargetGroupBinding` do app — CRD `elbv2.k8s.aws/v1beta1` exige ARN, não name) |
+## Grafana Dashboards
 
-O deploy da app **assume que esses params existem** — sem eles o pipeline falha.
+Os dashboards são pré-carregados no bootstrap via ConfigMaps, não configurados manualmente.
+O sidecar do Grafana (kube-prometheus-stack) monitora ConfigMaps com a label
+`grafana_dashboard=1` em todos os namespaces e importa cada chave `*.json` como
+um dashboard. A annotation `grafana_folder` agrupa dashboards em pastas na UI.
+
+Isso garante que o Grafana inicia com dashboards prontas no primeiro deploy,
+sem intervenção manual pós-bootstrap.
 
 ## ADRs
 

@@ -7,7 +7,7 @@ resource "aws_sqs_queue" "email_dlq" {
 
 resource "aws_sqs_queue" "email" {
   name                       = "auto-repair-shop-email-${var.environment}"
-  visibility_timeout_seconds = 35 # must be >= Lambda timeout (30s)
+  visibility_timeout_seconds = 180 # 6× Lambda timeout (30s) per AWS recommendation
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dlq.arn

@@ -1,9 +1,3 @@
-// DB resources for the app: stored in AWS Secrets Manager so the app pod
-// can read its credentials at runtime. The actual database/role creation
-// happens in module.k8s via a Kubernetes Job (see modules/k8s/db-init.tf).
-// That Job runs in-cluster and reaches the private RDS endpoint without
-// needing an ARC self-hosted runner.
-
 resource "aws_secretsmanager_secret" "app" {
   name                    = "auto-repair-shop/${var.environment}/db-app"
   description             = "RDS app user credentials for ${var.environment}"

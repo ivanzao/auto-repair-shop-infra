@@ -4,6 +4,18 @@ grafana:
     type: ClusterIP
   adminPassword: ${grafana_admin_password}
 
+  # Sidecar discovers ConfigMaps with label grafana_dashboard=1 across all
+  # namespaces and loads them as dashboards into the "Auto Repair Shop" folder.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+
   # ADR-002: hardcoded credentials are deliberate for this academic project.
   # The chart's assertNoLeakedSecrets check otherwise rejects explicit
   # values.grafana.ini.database.password.
