@@ -1,96 +1,145 @@
 # auto-repair-shop-infra
 
-Terraform monorepo da infraestrutura do Auto Repair Shop, com **um root por ambiente** (`hml/`, `prod/`) consumindo módulos compartilhados em `modules/`.
+Terraform da infraestrutura completa do Auto Repair Shop na AWS — dois ambientes independentes (`hml` e `prod`), cada um com VPC, EKS, RDS e stack de observabilidade provisionados a partir de módulos compartilhados.
 
-## Estrutura
+---
+
+## Estrutura de Pastas
 
 ```
-hml/        # root terraform do ambiente HML  (state key: hml/terraform.tfstate)
-prod/       # root terraform do ambiente PROD (state key: prod/terraform.tfstate)
+hml/          # Root Terraform do ambiente HML
+prod/         # Root Terraform do ambiente PROD
 modules/
-  vpc/      # VPC, subnets (2 pub + 2 priv), IGW, NAT, lambda SG
-  eks/      # EKS cluster (1.32), launch template (IMDS hop_limit=2), node group
-  rds/      # RDS PostgreSQL 16 + db-master secret + parameter/subnet/security groups
-  db/       # Secret do usuário app (criação real de roles/DBs feita por Job in-cluster)
-  k8s/      # Namespaces, SA, ALB controller, observability (Helm), DB init Job, S3 buckets de loki/tempo
+  vpc/        # VPC, subnets, IGW, NAT Gateway
+  eks/        # Cluster EKS 1.32 + nodegroup t3.medium
+  rds/        # RDS PostgreSQL 16 + Secrets Manager
+  db/         # Secret do usuário da aplicação
+  k8s/        # Namespaces, ALB Controller, observabilidade (Helm), init do banco
+  gateway/    # API Gateway HTTP API, Lambda Authorizer, VPC Link, NLB
+  messaging/  # SNS, SQS, Lambda email
+  registry/   # ECR Pull Through Cache para GHCR
+docs/adrs/       # Architecture Decision Records
+docs/diagrams/   # Diagrama de componentes da plataforma
+scripts/         # Tunnels para Grafana e RDS
 ```
 
-Cada ambiente é um state separado no bucket `auto-repair-shop-tfstate-<account>`. HML e PROD são **clusters EKS independentes** com VPCs distintas (10.0.0.0/16 vs 10.1.0.0/16).
+> **Nota sobre 3 repositórios:** o enunciado sugere repos separados para K8s Infra e BD Infra. Mantemos os dois consolidados aqui por limitação do AWS Academy — sem criação de roles IAM por sub-projeto, a separação não traz isolamento real. A decisão está detalhada em [ADR-004](docs/adrs/ADR-004-infra-monorepo.md).
 
-## Por que um root por ambiente em vez de sub-projeto por camada
+---
 
-- O lab AWS Academy tem só `LabRole` — não dá pra criar OIDC providers nem policies próprias, então a separação por camada não traz isolamento real de IAM.
-- Manter `hml` e `prod` em roots separados preserva blast radius: um `destroy` em `prod/` não toca `hml/`.
-- Os modules em `modules/` são versionados juntos com os envs — mudança propaga pra ambos via PR + deploy sequencial.
+## Arquitetura
 
-## CI/CD
+Cada ambiente é um state Terraform independente no S3. HML e PROD têm VPCs distintas (10.0.0.0/16 vs 10.1.0.0/16) e clusters EKS separados.
 
-- **pr-check.yaml** — `terraform fmt/validate/plan` por ambiente; resultado vira comentário no PR.
-- **deploy.yaml** — em `push` para `main`:
-  1. `deploy-hml` — `terraform init` + apply duas vezes em `hml/`
-  2. `deploy-prod` — só executa se HML deu sucesso; mesmo fluxo em `prod/`
+```
+Internet
+    │
+    ▼
+AWS API Gateway HTTP API
+    ├── POST /auth/login ──────────────► Lambda login (CPF + bcrypt → JWT)
+    └── ANY /v1/{proxy+} ──► Lambda authorizer ──► VPC Link ──► NLB ──► EKS
+                                                                         │
+                                                                       App pod
+                                                                         │
+                                                                    RDS PostgreSQL
+                                                                         │
+                                                               SNS ──► SQS ──► Lambda email
+```
 
-O **two-pass apply** é necessário porque o provider `kubernetes_manifest` precisa falar com a API do cluster no plan time. Pass 1 builda VPC+EKS+RDS+`module.k8s` (helm releases inclusos); pass 2 aplica manifests standalone como `otel_instrumentation` que dependem de CRDs do pass 1.
+O app não conhece o segredo JWT — o Lambda Authorizer valida o token e injeta `X-User-Id` e `X-User-Role` como headers antes de encaminhar para os pods.
 
-## Setup inicial (bootstrap do state bucket)
+### Observabilidade
 
-O workflow `deploy.yaml` já cria o bucket no primeiro run se ele não existir (`aws s3api head-bucket || create + enable versioning + encryption`). Não há script separado.
+Stack LGTM completo no namespace `observability`:
 
-## SSM Parameter Store — Contrato de Integração
+- **Prometheus** (via kube-prometheus-stack) — métricas do cluster e da app
+- **Grafana** — dashboards pré-carregados no bootstrap (APM, ordens de serviço, erros)
+- **Loki** — logs estruturados JSON coletados pelo Alloy daemonset
+- **Tempo** — traces distribuídos injetados automaticamente pelo OTel Operator
+- **Alertmanager** — alertas de latência, CrashLoop, erros de processamento e uptime
 
-As aplicações consomem outputs da infra via SSM Parameter Store, não via
-`terraform_remote_state`. Isso desacopla o ciclo de deploy das aplicações
-do estado do Terraform.
+---
 
-**Padrão de nomes:** `/auto-repair-shop/<env>/<recurso>/<atributo>`
+## Stack
 
-| Parâmetro | Publicado por | Conteúdo |
-|-----------|--------------|----------|
-| `/auto-repair-shop/{env}/eks/cluster-name` | `hml/ssm.tf`, `prod/ssm.tf` | Nome do cluster EKS |
-| `/auto-repair-shop/{env}/db/secret-arn` | `hml/ssm.tf`, `prod/ssm.tf` | ARN do secret de credenciais da app (JSON com host, port, dbname, username, password) |
-| `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
-| `/auto-repair-shop/{env}/apigw/api-id` | `modules/gateway` | ID do HTTP API |
-| `/auto-repair-shop/{env}/apigw/vpc-link-id` | `modules/gateway` | ID do VPC Link |
-| `/auto-repair-shop/{env}/apigw/execution-arn` | `modules/gateway` | Execution ARN (para Lambda permissions) |
-| `/auto-repair-shop/{env}/apigw/private-listener-arn` | `modules/gateway` | ARN do listener do NLB interno |
-| `/auto-repair-shop/{env}/alb/app-target-group-arn` | `modules/gateway` | ARN do Target Group da app (CRD TargetGroupBinding exige ARN) |
-| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` | ARN do tópico SNS de eventos |
-| `/auto-repair-shop/{env}/sqs/email-queue-arn` | `modules/messaging` | ARN da fila SQS de emails |
-
-**Não publicamos** host/dbname/username separadamente em SSM — tudo vive no JSON do Secrets Manager para evitar drift. O deploy da app assume que esses parâmetros existem — sem eles o pipeline falha.
-
-## Grafana Dashboards
-
-Os dashboards são pré-carregados no bootstrap via ConfigMaps, não configurados manualmente.
-O sidecar do Grafana (kube-prometheus-stack) monitora ConfigMaps com a label
-`grafana_dashboard=1` em todos os namespaces e importa cada chave `*.json` como
-um dashboard. A annotation `grafana_folder` agrupa dashboards em pastas na UI.
-
-Isso garante que o Grafana inicia com dashboards prontas no primeiro deploy,
-sem intervenção manual pós-bootstrap.
-
-## Acesso local aos serviços do cluster
-
-Os scripts em `scripts/` automatizam port-forward para serviços internos ao cluster. Aceitam `prod` ou `hml` como argumento (padrão: `prod`) e resolvem credenciais AWS pela cadeia padrão do CLI.
-
-| Script | O que faz |
+| Componente | Tecnologia |
 |---|---|
-| `scripts/grafana-tunnel.sh [prod\|hml]` | Port-forward do Grafana → `http://localhost:3000` (admin / admin) |
-| `scripts/rds-tunnel.sh [prod\|hml]` | Tunnel RDS via pod socat → `localhost:5432` (credenciais impressas na tela) |
+| IaC | Terraform 1.10 |
+| Compute | EKS 1.32 (nós t3.medium) |
+| Banco | RDS PostgreSQL 16 (db.t3.micro) |
+| API Gateway | AWS API Gateway HTTP API v2 |
+| Serverless | AWS Lambda (container, arm64) |
+| Messaging | SNS + SQS |
+| Observabilidade | Prometheus, Grafana, Loki, Tempo, Alloy |
+| Manifests K8s | Helm (via provider Terraform) |
+
+---
+
+## Acesso Local aos Serviços
+
+O Grafana e o RDS ficam dentro da VPC. Os scripts abaixo abrem tunnels para acesso local:
 
 ```bash
-./scripts/grafana-tunnel.sh prod   # abre http://localhost:3000
-./scripts/rds-tunnel.sh prod       # abre localhost:5432
+# Grafana → http://localhost:3000  (admin / admin)
+./scripts/grafana-tunnel.sh prod
+
+# RDS → localhost:5432  (credenciais impressas na tela)
+./scripts/rds-tunnel.sh prod
 ```
 
-**Pré-requisitos:** `aws cli`, `kubectl`, `jq` (só `rds-tunnel.sh`).
+Substitua `prod` por `hml` para o ambiente de homologação.
 
-O Grafana fica como `ClusterIP` por design — expô-lo como LoadBalancer o deixaria público sem autenticação de rede.
+**Pré-requisitos:** `aws cli`, `kubectl`, `jq` (só no tunnel de RDS).
+
+---
+
+## Deploy
+
+O deploy é feito automaticamente pelo pipeline em `push` para `main`:
+
+1. Deploy HML — `terraform apply` em `hml/`
+2. Deploy PROD — executa somente se HML foi bem-sucedido
+
+O primeiro deploy exige dois passes (targets específicos, depois apply completo) por conta de dependências entre CRDs e manifests Kubernetes. O pipeline cuida disso automaticamente.
+
+---
+
+## CI/CD Pipeline
+
+| Workflow | Trigger | O que faz |
+|---|---|---|
+| `pr-check.yaml` | PRs para `main` | `terraform fmt`, `validate` e `plan` por ambiente; resultado como comentário no PR |
+| `deploy.yaml` | Push `main` | Apply HML → Apply PROD (sequencial) |
+
+### Secrets necessários no GitHub
+
+| Secret | Descrição |
+|---|---|
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` | Credenciais AWS Academy |
+| `DB_MASTER_PASSWORD` | Senha do usuário master do RDS |
+| `DB_PASSWORD_HML` / `DB_PASSWORD_PROD` | Senhas da aplicação por ambiente |
+| `GHCR_TOKEN` | PAT para pull de imagens do GHCR |
+
+---
+
+## Contrato de Integração (SSM Parameter Store)
+
+Os outros repos consomem outputs da infra via SSM — sem `terraform_remote_state`.
+
+| Parâmetro | Publicado por | Conteúdo |
+|---|---|---|
+| `/auto-repair-shop/{env}/eks/cluster-name` | `hml/`, `prod/` | Nome do cluster EKS |
+| `/auto-repair-shop/{env}/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais (JSON com host, port, dbname, user, password) |
+| `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
+| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` | ARN do tópico SNS de eventos |
+
+---
 
 ## ADRs
 
-Decisões importantes estão em `docs/adrs/`:
+Decisões arquiteturais documentadas em `docs/adrs/`:
 
-- **ADR-001** — restrições de storage do AWS Academy
-- **ADR-002** — senhas hardcoded para Grafana/admin em contexto acadêmico
-- **ADR-003** — acesso a S3 dos pods via IMDS hop_limit=2 (substitui IRSA, que é bloqueado no Academy)
+- **ADR-001** — Credenciais padrão no contexto acadêmico
+- **ADR-002** — Contornando restrições de IAM do AWS Academy
+- **ADR-003** — Lambda Authorizer injeta headers; app não revalida JWT
+- **ADR-004** — K8s e BD no mesmo repositório de infra

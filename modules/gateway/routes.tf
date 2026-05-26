@@ -92,6 +92,20 @@ resource "aws_apigatewayv2_route" "health" {
   target    = "integrations/${aws_apigatewayv2_integration.app_public.id}"
 }
 
+# Swagger UI — Ktor exposes the UI at /swagger and its assets at /swagger/{proxy+}.
+# These routes are public (no JWT) so developers can browse the API docs without a token.
+resource "aws_apigatewayv2_route" "swagger_root" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /swagger"
+  target    = "integrations/${aws_apigatewayv2_integration.app_public.id}"
+}
+
+resource "aws_apigatewayv2_route" "swagger_proxy" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /swagger/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.app_public.id}"
+}
+
 resource "aws_apigatewayv2_route" "quote_decline" {
   api_id    = aws_apigatewayv2_api.this.id
   route_key = "GET /v1/orders/quote/decline"
