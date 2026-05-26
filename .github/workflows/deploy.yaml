@@ -58,6 +58,20 @@ jobs:
       - name: Apply infra (VPC + EKS + RDS + module.k8s)
         run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
 
+      - name: Warm ECR PTC for Lambda images
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          ECR="${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com"
+
+          aws ecr get-login-password --region us-east-1 | \
+            docker login --username AWS --password-stdin "$ECR"
+
+          for LAMBDA in login authorizer email; do
+            URL="${ECR}/ghcr-hml/ivanzao/auto-repair-shop-${LAMBDA}:latest"
+            echo "Warming PTC: $URL"
+            docker pull --platform linux/arm64 "$URL"
+          done
+
       - name: Apply kubernetes manifests
         run: terraform apply -auto-approve
 
@@ -100,6 +114,20 @@ jobs:
       # otel_instrumentation that depend on CRDs from step 1.
       - name: Apply infra (VPC + EKS + RDS + module.k8s)
         run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
+
+      - name: Warm ECR PTC for Lambda images
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          ECR="${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com"
+
+          aws ecr get-login-password --region us-east-1 | \
+            docker login --username AWS --password-stdin "$ECR"
+
+          for LAMBDA in login authorizer email; do
+            URL="${ECR}/ghcr-prod/ivanzao/auto-repair-shop-${LAMBDA}:latest"
+            echo "Warming PTC: $URL"
+            docker pull --platform linux/arm64 "$URL"
+          done
 
       - name: Apply kubernetes manifests
         run: terraform apply -auto-approve

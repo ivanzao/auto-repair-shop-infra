@@ -69,6 +69,24 @@ um dashboard. A annotation `grafana_folder` agrupa dashboards em pastas na UI.
 Isso garante que o Grafana inicia com dashboards prontas no primeiro deploy,
 sem intervenção manual pós-bootstrap.
 
+## Acesso local aos serviços do cluster
+
+Os scripts em `scripts/` automatizam port-forward para serviços internos ao cluster. Aceitam `prod` ou `hml` como argumento (padrão: `prod`) e resolvem credenciais AWS pela cadeia padrão do CLI.
+
+| Script | O que faz |
+|---|---|
+| `scripts/grafana-tunnel.sh [prod\|hml]` | Port-forward do Grafana → `http://localhost:3000` (admin / admin) |
+| `scripts/rds-tunnel.sh [prod\|hml]` | Tunnel RDS via pod socat → `localhost:5432` (credenciais impressas na tela) |
+
+```bash
+./scripts/grafana-tunnel.sh prod   # abre http://localhost:3000
+./scripts/rds-tunnel.sh prod       # abre localhost:5432
+```
+
+**Pré-requisitos:** `aws cli`, `kubectl`, `jq` (só `rds-tunnel.sh`).
+
+O Grafana fica como `ClusterIP` por design — expô-lo como LoadBalancer o deixaria público sem autenticação de rede.
+
 ## ADRs
 
 Decisões importantes estão em `docs/adrs/`:

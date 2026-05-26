@@ -13,8 +13,8 @@ additionalPrometheusRulesMap:
           #    rotas críticas.
           - alert: HighOrderCreationErrors
             expr: |
-              sum(rate(http_server_requests_seconds_count{job=~".*auto-repair-shop.*",status=~"5.."}[5m]))
-                / sum(rate(http_server_requests_seconds_count{job=~".*auto-repair-shop.*"}[5m]))
+              sum(rate(ktor_http_server_requests_seconds_count{job=~".*auto-repair-shop.*",status=~"5.."}[5m]))
+                / sum(rate(ktor_http_server_requests_seconds_count{job=~".*auto-repair-shop.*"}[5m]))
                 > 0.05
             for: 5m
             labels:
@@ -40,7 +40,7 @@ additionalPrometheusRulesMap:
           - alert: HighLatency
             expr: |
               histogram_quantile(0.95,
-                sum by (le) (rate(http_server_requests_seconds_bucket{job=~".*auto-repair-shop.*"}[5m]))
+                sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~".*auto-repair-shop.*"}[5m]))
               ) > 1
             for: 10m
             labels:

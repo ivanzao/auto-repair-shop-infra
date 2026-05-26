@@ -31,7 +31,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m]))",
+          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -57,7 +57,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"4..\"}[5m]))",
+          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"4..\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -96,7 +96,7 @@
       "datasource": { "type": "loki", "uid": "$loki" },
       "targets": [
         {
-          "expr": "sum(count_over_time({service=\"auto-repair-shop\"} |= `\"level\":\"ERROR\"` [5m]))",
+          "expr": "sum(count_over_time({app=\"auto-repair-shop\"} |= `\"level\":\"ERROR\"` [5m]))",
           "refId": "A"
         }
       ],
@@ -110,7 +110,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"[45]..\"}[5m]))",
+          "expr": "sum by (status) (rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"[45]..\"}[5m]))",
           "refId": "A",
           "legendFormat": "{{status}}"
         }
@@ -125,7 +125,7 @@
       "datasource": { "type": "loki", "uid": "$loki" },
       "targets": [
         {
-          "expr": "sum by (level) (rate({service=\"auto-repair-shop\"} | json | __error__=\"\" [5m]))",
+          "expr": "sum by (level) (rate({app=\"auto-repair-shop\"} | json | __error__=\"\" [5m]))",
           "refId": "A",
           "legendFormat": "{{level}}"
         }
@@ -133,22 +133,75 @@
       "fieldConfig": { "defaults": { "unit": "short" } }
     },
     {
-      "type": "logs",
+      "type": "table",
       "title": "Últimos erros (Loki)",
       "id": 7,
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 13 },
       "datasource": { "type": "loki", "uid": "$loki" },
       "targets": [
         {
-          "expr": "{service=\"auto-repair-shop\"} |= `\"level\":\"ERROR\"`",
+          "expr": "{app=\"auto-repair-shop\"} |~ `\"level\":\"ERROR\"` | json | level=\"ERROR\" | label_format stack_short=`{{ printf \"%.500s\" .stack_trace }}`",
+          "queryType": "range",
           "refId": "A"
         }
       ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": { "source": "labels" }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Line": true,
+              "labels": true,
+              "labelTypes": true,
+              "tsNs": true,
+              "id": true,
+              "@timestamp": true,
+              "@version": true,
+              "level": true,
+              "level_value": true,
+              "thread_name": true,
+              "logger_name": true,
+              "service": true,
+              "service_name": true,
+              "app": true,
+              "container": true,
+              "instance": true,
+              "job": true,
+              "namespace": true,
+              "pod": true,
+              "stream": true,
+              "detected_level": true,
+              "stack_trace": true
+            },
+            "indexByName": {
+              "Time": 0,
+              "message": 1,
+              "stack_short": 2
+            },
+            "renameByName": {
+              "Time": "Data/Hora",
+              "message": "Exception",
+              "stack_short": "Stacktrace (500 chars)"
+            }
+          }
+        }
+      ],
       "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending",
-        "dedupStrategy": "none"
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Data/Hora", "desc": true }]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "filterable": false }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Data/Hora" }, "properties": [{ "id": "custom.width", "value": 180 }] },
+          { "matcher": { "id": "byName", "options": "Exception" }, "properties": [{ "id": "custom.width", "value": 500 }] }
+        ]
       }
     }
   ]

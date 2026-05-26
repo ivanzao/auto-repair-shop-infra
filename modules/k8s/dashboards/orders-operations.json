@@ -32,7 +32,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum(increase(orders_created_total[24h]))",
+          "expr": "sum(increase(orders_total[24h]))",
           "refId": "A",
           "legendFormat": "criadas"
         }
@@ -105,7 +105,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum(rate(orders_created_total[5m])) * 3600",
+          "expr": "sum(rate(orders_total[5m])) * 3600",
           "refId": "A",
           "legendFormat": "OS/hora"
         }
@@ -166,7 +166,7 @@
       "datasource": { "type": "loki", "uid": "$loki" },
       "targets": [
         {
-          "expr": "avg by (from_status) (avg_over_time({service=\"auto-repair-shop\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [$__range]))",
+          "expr": "avg by (from_status) (avg_over_time({app=\"auto-repair-shop\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [$__range]))",
           "refId": "A",
           "legendFormat": "{{from_status}}"
         }
@@ -186,7 +186,7 @@
       "datasource": { "type": "loki", "uid": "$loki" },
       "targets": [
         {
-          "expr": "quantile_over_time(0.95, {service=\"auto-repair-shop\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [5m]) by (from_status)",
+          "expr": "quantile_over_time(0.95, {app=\"auto-repair-shop\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [5m]) by (from_status)",
           "refId": "A",
           "legendFormat": "{{from_status}}"
         }

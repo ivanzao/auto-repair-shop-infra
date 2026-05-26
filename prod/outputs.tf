@@ -25,7 +25,7 @@ output "secret_arn_master" {
 
 output "secret_arn_app" {
   description = "ARN of the app credentials secret (host, port, dbname, username, password)"
-  value       = module.db.secret_arn_app
+  value       = module.rds.secret_arn_app
 }
 
 output "arc_runner_set_name" {

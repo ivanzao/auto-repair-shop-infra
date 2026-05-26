@@ -37,18 +37,7 @@ module "rds" {
   # See ADR-002 (production-hardening section) before promoting to a real prod.
   skip_final_snapshot         = true
   secret_recovery_window_days = 0
-}
-
-module "db" {
-  source          = "../modules/db"
-  environment     = "prod"
-  rds_endpoint    = module.rds.rds_endpoint
-  rds_port        = module.rds.rds_port
-  db_app_password = var.db_app_password
-
-  secret_recovery_window_days = 0
-
-  depends_on = [module.rds]
+  db_app_password             = var.db_app_password
 }
 
 resource "kubernetes_manifest" "otel_instrumentation" {
@@ -61,7 +50,7 @@ resource "kubernetes_manifest" "otel_instrumentation" {
     }
     spec = {
       exporter = {
-        endpoint = "http://alloy-daemonset.observability.svc.cluster.local:4318"
+        endpoint = "http://alloy-gateway.observability.svc.cluster.local:4318"
       }
       propagators = ["tracecontext", "baggage"]
       sampler = {
@@ -120,7 +109,7 @@ module "gateway" {
   vpc_id                = module.vpc.vpc_id
   node_group_asg_names  = module.eks.node_group_asg_names
   ecr_repository_prefix = module.registry.ecr_repository_prefix
-  db_secret_arn         = module.db.secret_arn_app
+  db_secret_arn         = module.rds.secret_arn_app
 
   depends_on = [module.k8s, module.registry]
 }

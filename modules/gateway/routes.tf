@@ -86,6 +86,12 @@ resource "aws_apigatewayv2_route" "quote_approve" {
   target    = "integrations/${aws_apigatewayv2_integration.app_public.id}"
 }
 
+resource "aws_apigatewayv2_route" "health" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /health"
+  target    = "integrations/${aws_apigatewayv2_integration.app_public.id}"
+}
+
 resource "aws_apigatewayv2_route" "quote_decline" {
   api_id    = aws_apigatewayv2_api.this.id
   route_key = "GET /v1/orders/quote/decline"

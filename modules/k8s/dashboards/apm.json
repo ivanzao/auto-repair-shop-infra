@@ -26,7 +26,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -40,7 +40,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m])) / sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -66,7 +66,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
           "refId": "A"
         }
       ],
@@ -92,7 +92,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
           "refId": "A"
         }
       ],
@@ -106,17 +106,17 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
           "refId": "A",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
           "refId": "B",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
           "refId": "C",
           "legendFormat": "p99"
         }
@@ -131,7 +131,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum by (route) (rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
           "refId": "A",
           "legendFormat": "{{uri}}"
         }
@@ -146,7 +146,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum by (status) (rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
           "refId": "A",
           "legendFormat": "{{status}}"
         }
@@ -161,7 +161,7 @@
       "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
         {
-          "expr": "topk(10, histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m]))))",
+          "expr": "topk(10, histogram_quantile(0.95, sum by (route, le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m]))))",
           "refId": "A",
           "format": "table",
           "instant": true
