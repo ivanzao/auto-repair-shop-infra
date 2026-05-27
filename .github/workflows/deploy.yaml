@@ -6,9 +6,6 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  # ── HML DEPLOY ──────────────────────────────────────────────────────────────
-  # Single stage. DB roles/databases are created by a Kubernetes Job inside
-  # the cluster (modules/k8s/db-init.tf) — no self-hosted runner needed.
   deploy-hml:
     runs-on: ubuntu-latest
     defaults:
@@ -44,39 +41,12 @@ jobs:
           }
           terraform init -backend-config="bucket=${BUCKET}"
 
-      # First-time bootstrap: kubernetes_manifest.otel_instrumentation needs
-      # the cluster to exist BEFORE plan (kube provider needs to talk to API
-      # server). Two-pass apply handles the cold start:
-      #   pass 1: skip the manifest, build VPC+EKS+RDS+k8s
-      #   pass 2: full apply (cluster now reachable)
-      # On steady state, pass 1 is a no-op.
-      # Two-pass apply: the kubernetes_manifest provider needs to talk to the
-      # cluster API at plan time, so on a cold start it can't be planned before
-      # the cluster exists. Step 1 builds the infra + everything in module.k8s
-      # (helm releases included). Step 2 applies the standalone manifests like
-      # otel_instrumentation that depend on CRDs from step 1.
       - name: Apply infra (VPC + EKS + RDS + module.k8s)
         run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
-
-      - name: Warm ECR PTC for Lambda images
-        run: |
-          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-          ECR="${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com"
-
-          aws ecr get-login-password --region us-east-1 | \
-            docker login --username AWS --password-stdin "$ECR"
-
-          for LAMBDA in login authorizer email; do
-            URL="${ECR}/ghcr-hml/ivanzao/auto-repair-shop-${LAMBDA}:latest"
-            echo "Warming PTC: $URL"
-            docker pull --platform linux/arm64 "$URL"
-          done
 
       - name: Apply kubernetes manifests
         run: terraform apply -auto-approve
 
-  # ── PROD DEPLOY ─────────────────────────────────────────────────────────────
-  # Only runs if HML succeeded.
   deploy-prod:
     needs: deploy-hml
     if: needs.deploy-hml.result == 'success'
@@ -107,27 +77,8 @@ jobs:
           BUCKET="auto-repair-shop-tfstate-$(aws sts get-caller-identity --query Account --output text)"
           terraform init -backend-config="bucket=${BUCKET}"
 
-      # Two-pass apply: the kubernetes_manifest provider needs to talk to the
-      # cluster API at plan time, so on a cold start it can't be planned before
-      # the cluster exists. Step 1 builds the infra + everything in module.k8s
-      # (helm releases included). Step 2 applies the standalone manifests like
-      # otel_instrumentation that depend on CRDs from step 1.
       - name: Apply infra (VPC + EKS + RDS + module.k8s)
         run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
-
-      - name: Warm ECR PTC for Lambda images
-        run: |
-          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-          ECR="${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com"
-
-          aws ecr get-login-password --region us-east-1 | \
-            docker login --username AWS --password-stdin "$ECR"
-
-          for LAMBDA in login authorizer email; do
-            URL="${ECR}/ghcr-prod/ivanzao/auto-repair-shop-${LAMBDA}:latest"
-            echo "Warming PTC: $URL"
-            docker pull --platform linux/arm64 "$URL"
-          done
 
       - name: Apply kubernetes manifests
         run: terraform apply -auto-approve
