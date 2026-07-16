@@ -1,15 +1,12 @@
 locals {
-  common_tags = {
-    Environment = var.environment
-    Application = "auto-repair-shop"
-    ManagedBy   = "terraform"
-  }
+  app_db_name     = coalesce(var.app_db_name, "auto_repair_shop_${var.environment}")
+  app_db_username = coalesce(var.app_db_username, "app_${var.environment}")
 }
 
 resource "aws_db_subnet_group" "this" {
   name       = "${var.db_identifier}-subnet-group"
   subnet_ids = var.private_subnet_ids
-  tags       = merge(local.common_tags, { Name = "${var.db_identifier}-subnet-group" })
+  tags       = { Name = "${var.db_identifier}-subnet-group" }
 }
 
 resource "aws_security_group" "this" {
@@ -18,7 +15,7 @@ resource "aws_security_group" "this" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "PostgreSQL from EKS nodes and self-hosted runners"
+    description     = "PostgreSQL from EKS nodes"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
@@ -40,7 +37,7 @@ resource "aws_security_group" "this" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = merge(local.common_tags, { Name = "${var.db_identifier}-sg" })
+  tags = { Name = "${var.db_identifier}-sg" }
 }
 
 resource "aws_db_parameter_group" "this" {
@@ -57,8 +54,6 @@ resource "aws_db_parameter_group" "this" {
     name  = "log_disconnections"
     value = "1"
   }
-
-  tags = local.common_tags
 }
 
 resource "aws_db_instance" "this" {
@@ -83,14 +78,13 @@ resource "aws_db_instance" "this" {
   skip_final_snapshot = var.skip_final_snapshot
   multi_az            = false
 
-  tags = merge(local.common_tags, { Name = var.db_identifier })
+  tags = { Name = var.db_identifier }
 }
 
 resource "aws_secretsmanager_secret" "master" {
-  name                    = "auto-repair-shop/${var.environment}/db-master"
+  name                    = "${var.secret_name_prefix}/${var.environment}/db-master"
   description             = "RDS master credentials for ${var.environment}"
   recovery_window_in_days = var.secret_recovery_window_days
-  tags                    = local.common_tags
 }
 
 resource "aws_secretsmanager_secret_version" "master" {
@@ -105,7 +99,7 @@ resource "aws_secretsmanager_secret_version" "master" {
 }
 
 resource "aws_secretsmanager_secret" "app" {
-  name                    = "auto-repair-shop/${var.environment}/db-app"
+  name                    = "${var.secret_name_prefix}/${var.environment}/db-app"
   description             = "RDS app user credentials for ${var.environment}"
   recovery_window_in_days = var.secret_recovery_window_days
 }
@@ -113,10 +107,10 @@ resource "aws_secretsmanager_secret" "app" {
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id = aws_secretsmanager_secret.app.id
   secret_string = jsonencode({
-    username = "app_${var.environment}"
+    username = local.app_db_username
     password = var.db_app_password
     host     = aws_db_instance.this.address
     port     = aws_db_instance.this.port
-    dbname   = "auto_repair_shop_${var.environment}"
+    dbname   = local.app_db_name
   })
 }

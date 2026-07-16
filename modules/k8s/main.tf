@@ -3,11 +3,6 @@ locals {
   app_namespace   = "auto-repair-shop-${var.environment}"
   grafana_db_name = var.grafana_db_name != "" ? var.grafana_db_name : "grafana_${var.environment}"
   grafana_db_user = var.grafana_db_user != "" ? var.grafana_db_user : "grafana_${var.environment}"
-  common_tags = {
-    Environment = var.environment
-    Application = "auto-repair-shop"
-    ManagedBy   = "terraform"
-  }
 }
 
 resource "kubernetes_namespace" "app" {

@@ -1,28 +1,51 @@
-resource "kubernetes_secret" "db_init_credentials" {
+locals {
+  db_init = {
+    grafana = {
+      endpoint = var.rds_endpoint
+      role     = "grafana_${var.environment}"
+      db       = "grafana_${var.environment}"
+      pw       = var.grafana_db_password
+    }
+    order = {
+      endpoint = var.rds_endpoint
+      role     = var.order_db_role
+      db       = var.order_db_name
+      pw       = var.db_order_app_password
+    }
+    billing = {
+      endpoint = var.rds_billing_endpoint
+      role     = var.billing_db_role
+      db       = var.billing_db_name
+      pw       = var.db_billing_app_password
+    }
+  }
+}
+
+resource "kubernetes_secret" "db_init" {
+  for_each = local.db_init
+
   metadata {
-    name      = "db-init-credentials"
+    name      = "db-init-${each.key}-credentials"
     namespace = local.app_namespace
   }
   data = {
-    POSTGRES_PASSWORD   = var.db_master_password
-    GRAFANA_DB_PASSWORD = var.grafana_db_password
-    APP_DB_PASSWORD     = var.db_app_password
+    POSTGRES_PASSWORD = var.db_master_password
+    ROLE_PASSWORD     = each.value.pw
   }
   type       = "Opaque"
   depends_on = [kubernetes_namespace.app]
 }
 
 resource "kubernetes_job_v1" "db_init" {
+  for_each = local.db_init
+
   metadata {
-    // Hash the credential triggers into the name so password rotations create
-    // a fresh job (otherwise the existing Job is immutable and won't re-run).
-    name      = "db-init-${substr(sha1("${var.db_master_password}${var.grafana_db_password}${var.db_app_password}${var.rds_endpoint}"), 0, 8)}"
+    name      = "db-init-${each.key}-${substr(sha1("${var.db_master_password}${each.value.pw}${each.value.endpoint}"), 0, 8)}"
     namespace = local.app_namespace
   }
 
   spec {
-    backoff_limit              = 5
-    ttl_seconds_after_finished = 3600
+    backoff_limit = 5
 
     template {
       metadata {}
@@ -35,7 +58,7 @@ resource "kubernetes_job_v1" "db_init" {
 
           env {
             name  = "PGHOST"
-            value = var.rds_endpoint
+            value = each.value.endpoint
           }
           env {
             name  = "PGUSER"
@@ -45,70 +68,52 @@ resource "kubernetes_job_v1" "db_init" {
             name = "PGPASSWORD"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.db_init_credentials.metadata[0].name
+                name = kubernetes_secret.db_init[each.key].metadata[0].name
                 key  = "POSTGRES_PASSWORD"
               }
             }
           }
           env {
-            name = "GRAFANA_PW"
+            name = "ROLE_PW"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.db_init_credentials.metadata[0].name
-                key  = "GRAFANA_DB_PASSWORD"
+                name = kubernetes_secret.db_init[each.key].metadata[0].name
+                key  = "ROLE_PASSWORD"
               }
             }
           }
           env {
-            name = "APP_PW"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.db_init_credentials.metadata[0].name
-                key  = "APP_DB_PASSWORD"
-              }
-            }
+            name  = "DB_ROLE"
+            value = each.value.role
           }
           env {
-            name  = "ENV"
-            value = var.environment
+            name  = "DB_NAME"
+            value = each.value.db
           }
 
           command = ["sh", "-c"]
           args = [<<-EOT
             set -e
-            echo "Initializing DBs for env $ENV..."
+            echo "Initializing database $DB_NAME (role $DB_ROLE) on $PGHOST..."
 
-            # Roles — idempotent via DO blocks.
             psql <<SQL
             DO \$\$
             BEGIN
-              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'grafana_$ENV') THEN
-                EXECUTE format('CREATE ROLE grafana_%I WITH LOGIN PASSWORD %L', '$ENV', '$GRAFANA_PW');
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_ROLE') THEN
+                EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', '$DB_ROLE', '$ROLE_PW');
               ELSE
-                EXECUTE format('ALTER ROLE grafana_%I WITH LOGIN PASSWORD %L', '$ENV', '$GRAFANA_PW');
-              END IF;
-              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_$ENV') THEN
-                EXECUTE format('CREATE ROLE app_%I WITH LOGIN PASSWORD %L', '$ENV', '$APP_PW');
-              ELSE
-                EXECUTE format('ALTER ROLE app_%I WITH LOGIN PASSWORD %L', '$ENV', '$APP_PW');
+                EXECUTE format('ALTER ROLE %I WITH LOGIN PASSWORD %L', '$DB_ROLE', '$ROLE_PW');
               END IF;
             END
             \$\$;
             SQL
 
-            # Databases — CREATE DATABASE can't run inside a transaction, so
-            # do these via shell-level idempotency checks.
-            psql -tc "SELECT 1 FROM pg_database WHERE datname='grafana_$ENV'" | grep -q 1 || \
-              psql -c "CREATE DATABASE grafana_$ENV OWNER grafana_$ENV;"
+            psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
+              psql -c "CREATE DATABASE $DB_NAME OWNER $DB_ROLE;"
 
-            psql -tc "SELECT 1 FROM pg_database WHERE datname='auto_repair_shop_$ENV'" | grep -q 1 || \
-              psql -c "CREATE DATABASE auto_repair_shop_$ENV OWNER app_$ENV;"
+            psql -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO $DB_ROLE;"
 
-            # Schema grants — safe to re-grant.
-            psql -d grafana_$ENV -c "GRANT ALL ON SCHEMA public TO grafana_$ENV;"
-            psql -d auto_repair_shop_$ENV -c "GRANT ALL ON SCHEMA public TO app_$ENV;"
-
-            echo "DB init complete."
+            echo "DB init complete for $DB_NAME."
           EOT
           ]
         }
@@ -122,5 +127,5 @@ resource "kubernetes_job_v1" "db_init" {
     update = "10m"
   }
 
-  depends_on = [kubernetes_secret.db_init_credentials]
+  depends_on = [kubernetes_secret.db_init]
 }

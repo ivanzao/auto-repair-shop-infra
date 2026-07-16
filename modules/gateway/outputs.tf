@@ -20,15 +20,15 @@ output "endpoint" {
 
 output "private_listener_arn" {
   description = "Private NLB listener ARN used as API Gateway VPC Link integration URI"
-  value       = aws_lb_listener.app.arn
+  value       = aws_lb_listener.order.arn
 }
 
 output "app_target_group_name" {
   description = "Deterministic app target group name used by Kubernetes TargetGroupBinding"
-  value       = aws_lb_target_group.app.name
+  value       = aws_lb_target_group.order.name
 }
 
 output "app_target_group_arn" {
   description = "App target group ARN consumed by Kubernetes TargetGroupBinding (CRD requires ARN, not name)"
-  value       = aws_lb_target_group.app.arn
+  value       = aws_lb_target_group.order.arn
 }

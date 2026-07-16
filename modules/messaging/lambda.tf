@@ -1,8 +1,8 @@
 resource "aws_lambda_function" "email" {
   function_name                  = "auto-repair-shop-email-${var.environment}"
   package_type                   = "Image"
-  image_uri                      = "${local.ghcr_ecr_base}/auto-repair-shop-email:latest"
-  role                           = data.aws_iam_role.lab_role.arn
+  image_uri                      = "${var.lambda_image_base}/auto-repair-shop-email:latest"
+  role                           = local.lab_role_arn
   architectures                  = ["arm64"]
   timeout                        = 30
   memory_size                    = 256
@@ -20,7 +20,6 @@ resource "aws_lambda_function" "email" {
     }
   }
 
-  tags = local.common_tags
 
   lifecycle {
     ignore_changes = [image_uri, environment]

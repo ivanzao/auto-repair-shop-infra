@@ -1,8 +1,6 @@
 resource "aws_sqs_queue" "email_dlq" {
   name                      = "auto-repair-shop-email-dlq-${var.environment}"
   message_retention_seconds = 1209600 # 14 days
-
-  tags = local.common_tags
 }
 
 resource "aws_sqs_queue" "email" {
@@ -13,6 +11,4 @@ resource "aws_sqs_queue" "email" {
     deadLetterTargetArn = aws_sqs_queue.email_dlq.arn
     maxReceiveCount     = 3
   })
-
-  tags = local.common_tags
 }

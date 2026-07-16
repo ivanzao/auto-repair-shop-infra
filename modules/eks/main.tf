@@ -2,11 +2,6 @@ data "aws_caller_identity" "current" {}
 
 locals {
   lab_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
-  common_tags = {
-    Environment = var.environment
-    Application = "auto-repair-shop"
-    ManagedBy   = "terraform"
-  }
 }
 
 resource "aws_eks_cluster" "this" {
@@ -20,8 +15,6 @@ resource "aws_eks_cluster" "this" {
     endpoint_private_access = true
     public_access_cidrs     = var.public_access_cidrs
   }
-
-  tags = local.common_tags
 }
 
 resource "aws_launch_template" "node" {
@@ -35,7 +28,6 @@ resource "aws_launch_template" "node" {
 
   tag_specifications {
     resource_type = "instance"
-    tags          = local.common_tags
   }
 
   lifecycle {
@@ -63,7 +55,6 @@ resource "aws_eks_node_group" "default" {
 
   labels = { role = "general" }
 
-  tags = local.common_tags
 
   depends_on = [aws_eks_cluster.this]
 }

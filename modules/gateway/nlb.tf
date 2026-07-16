@@ -5,14 +5,14 @@ resource "aws_lb" "app" {
   security_groups    = [aws_security_group.app_nlb.id]
   subnets            = var.private_subnet_ids
 
-  tags = merge(local.common_tags, {
+  tags = {
     Name = local.app_target_group_name
-  })
+  }
 }
 
-resource "aws_lb_target_group" "app" {
+resource "aws_lb_target_group" "order" {
   name                 = local.app_target_group_name
-  port                 = var.app_node_port
+  port                 = local.node_ports.order
   protocol             = "TCP"
   target_type          = "instance"
   vpc_id               = var.vpc_id
@@ -24,29 +24,30 @@ resource "aws_lb_target_group" "app" {
     healthy_threshold   = 3
     interval            = 30
     port                = "traffic-port"
-    protocol            = "TCP"
+    protocol            = "HTTP"
+    path                = "/health"
     unhealthy_threshold = 3
   }
 
-  tags = merge(local.common_tags, {
+  tags = {
     Name = local.app_target_group_name
-  })
+  }
 }
 
-resource "aws_autoscaling_attachment" "app" {
+resource "aws_autoscaling_attachment" "order" {
   for_each = toset(var.node_group_asg_names)
 
   autoscaling_group_name = each.key
-  lb_target_group_arn    = aws_lb_target_group.app.arn
+  lb_target_group_arn    = aws_lb_target_group.order.arn
 }
 
-resource "aws_lb_listener" "app" {
+resource "aws_lb_listener" "order" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "TCP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.order.arn
   }
 }

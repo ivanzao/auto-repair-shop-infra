@@ -1,8 +1,8 @@
 resource "aws_lambda_function" "login" {
   function_name = "auto-repair-shop-login-${var.environment}"
   package_type  = "Image"
-  image_uri     = "${local.ghcr_ecr_base}/auto-repair-shop-login:latest"
-  role          = data.aws_iam_role.lab_role.arn
+  image_uri     = "${var.lambda_image_base}/auto-repair-shop-login:latest"
+  role          = local.lab_role_arn
   architectures = ["arm64"]
   timeout       = 15
   memory_size   = 256
@@ -19,7 +19,6 @@ resource "aws_lambda_function" "login" {
     }
   }
 
-  tags = local.common_tags
 
   lifecycle {
     ignore_changes = [image_uri, environment]
@@ -29,8 +28,8 @@ resource "aws_lambda_function" "login" {
 resource "aws_lambda_function" "authorizer" {
   function_name = "auto-repair-shop-authorizer-${var.environment}"
   package_type  = "Image"
-  image_uri     = "${local.ghcr_ecr_base}/auto-repair-shop-authorizer:latest"
-  role          = data.aws_iam_role.lab_role.arn
+  image_uri     = "${var.lambda_image_base}/auto-repair-shop-authorizer:latest"
+  role          = local.lab_role_arn
   architectures = ["arm64"]
   timeout       = 5
   memory_size   = 128
@@ -46,7 +45,6 @@ resource "aws_lambda_function" "authorizer" {
     }
   }
 
-  tags = local.common_tags
 
   lifecycle {
     ignore_changes = [image_uri, environment]

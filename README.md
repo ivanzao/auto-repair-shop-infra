@@ -12,12 +12,12 @@ prod/         # Root Terraform do ambiente PROD
 modules/
   vpc/        # VPC, subnets, IGW, NAT Gateway
   eks/        # Cluster EKS 1.32 + nodegroup t3.medium
-  rds/        # RDS PostgreSQL 16 + Secrets Manager
-  db/         # Secret do usuário da aplicação
-  k8s/        # Namespaces, ALB Controller, observabilidade (Helm), init do banco
-  gateway/    # API Gateway HTTP API, Lambda Authorizer, VPC Link, NLB
-  messaging/  # SNS, SQS, Lambda email
-  registry/   # ECR Pull Through Cache para GHCR
+  rds/          # RDS PostgreSQL 16 + Secrets Manager (genérico: order e billing)
+  execution-db/ # Tabela DynamoDB do execution service
+  k8s/          # Namespaces, ALB Controller, observabilidade (Helm), init do banco
+  gateway/      # API Gateway HTTP API, Lambda Authorizer, VPC Link, NLB
+  messaging/    # SNS, SQS, Lambda email
+  registry/     # ECR Pull Through Cache para GHCR
 docs/adrs/       # Architecture Decision Records
 docs/diagrams/   # Diagrama de componentes da plataforma
 scripts/         # Tunnels para Grafana e RDS
@@ -117,7 +117,8 @@ O primeiro deploy exige dois passes (targets específicos, depois apply completo
 |---|---|
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` | Credenciais AWS Academy |
 | `DB_MASTER_PASSWORD` | Senha do usuário master do RDS |
-| `DB_PASSWORD_HML` / `DB_PASSWORD_PROD` | Senhas da aplicação por ambiente |
+| `DB_PASSWORD_HML` / `DB_PASSWORD_PROD` | Senhas da aplicação (order) por ambiente |
+| `DB_BILLING_PASSWORD_HML` / `DB_BILLING_PASSWORD_PROD` | Senhas da aplicação do billing por ambiente |
 | `GHCR_TOKEN` | PAT para pull de imagens do GHCR |
 
 ---
@@ -129,9 +130,17 @@ Os outros repos consomem outputs da infra via SSM — sem `terraform_remote_stat
 | Parâmetro | Publicado por | Conteúdo |
 |---|---|---|
 | `/auto-repair-shop/{env}/eks/cluster-name` | `hml/`, `prod/` | Nome do cluster EKS |
-| `/auto-repair-shop/{env}/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais (JSON com host, port, dbname, user, password) |
+| `/auto-repair-shop/{env}/order/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais do order (JSON com host, port, dbname, user, password) |
 | `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
-| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` | ARN do tópico SNS de eventos |
+| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` | ARN do tópico SNS de eventos (legado, monólito) |
+| `/auto-repair-shop/{env}/sns/{order\|billing\|execution}-events-topic-arn` | `modules/messaging` | ARN do tópico de eventos de cada serviço (saga Fase 4) |
+| `/auto-repair-shop/{env}/sqs/{order\|billing\|execution}-queue-url` | `modules/messaging` | URL da fila (inbox) de cada serviço — assina os tópicos dos outros dois |
+| `/auto-repair-shop/{env}/billing/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais do billing (JSON com host, port, dbname, user, password) |
+| `/auto-repair-shop/{env}/billing/mercadopago-secret-arn` | `hml/`, `prod/` | ARN do secret do Mercado Pago — shell criado pela infra; valor populado pelo CI do repo do billing |
+| `/auto-repair-shop/{env}/execution/dynamodb/table-name` | `modules/execution-db` | Nome da tabela DynamoDB do execution service |
+| `/auto-repair-shop/{env}/alb/{billing\|execution}-target-group-arn` | `modules/gateway` | Target group NLB de cada serviço (NodePorts 30081/30082, listeners 8081/8082) |
+| `/auto-repair-shop/{env}/{order\|billing\|execution}/node-port` | `modules/gateway` | NodePort que a `Service` de cada app deve expor (contrato com os manifests dos apps) |
+| `/auto-repair-shop/{env}/eso/cluster-secret-store-name` | `modules/k8s` | Nome do ClusterSecretStore do External Secrets Operator que os `ExternalSecret` dos apps devem referenciar |
 
 ---
 

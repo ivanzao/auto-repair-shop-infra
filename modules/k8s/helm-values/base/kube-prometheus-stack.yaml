@@ -4,8 +4,6 @@ grafana:
     type: ClusterIP
   adminPassword: ${grafana_admin_password}
 
-  # Sidecar discovers ConfigMaps with label grafana_dashboard=1 across all
-  # namespaces and loads them as dashboards into the "Auto Repair Shop" folder.
   sidecar:
     dashboards:
       enabled: true
@@ -16,12 +14,8 @@ grafana:
       provider:
         foldersFromFilesStructure: true
 
-  # ADR-002: hardcoded credentials are deliberate for this academic project.
-  # The chart's assertNoLeakedSecrets check otherwise rejects explicit
-  # values.grafana.ini.database.password.
   assertNoLeakedSecrets: false
 
-  # Persistence via RDS Postgres so dashboards survive pod restarts.
   persistence:
     enabled: false
   grafana.ini:
@@ -33,7 +27,6 @@ grafana:
       password: ${grafana_db_password}
       ssl_mode: require
 
-  # Datasources for the full LGTM stack with log -> trace correlation.
   additionalDataSources:
     - name: Loki
       type: loki

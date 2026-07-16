@@ -5,80 +5,39 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
-  deploy-hml:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: hml
-    env:
-      TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
-      TF_VAR_db_app_password:    ${{ secrets.DB_PASSWORD_HML }}
-      TF_VAR_ghcr_token:         ${{ secrets.GHCR_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
+  hml:
+    uses: ./.github/workflows/terraform-apply.yaml
+    with:
+      environment: hml
+      gh_environment: hml
+    secrets:
+      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN:     ${{ secrets.AWS_SESSION_TOKEN }}
+      db_master_password:    ${{ secrets.DB_MASTER_PASSWORD }}
+      db_order_password:     ${{ secrets.DB_PASSWORD_HML }}
+      db_billing_password:   ${{ secrets.DB_BILLING_PASSWORD_HML }}
+      ghcr_token:            ${{ secrets.GHCR_TOKEN }}
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
-
-      - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: "~1.10" }
-
-      - name: Init
-        run: |
-          BUCKET="auto-repair-shop-tfstate-$(aws sts get-caller-identity --query Account --output text)"
-          aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || {
-            aws s3api create-bucket --bucket "$BUCKET" --region us-east-1
-            aws s3api put-bucket-versioning --bucket "$BUCKET" \
-              --versioning-configuration Status=Enabled
-            aws s3api put-bucket-encryption --bucket "$BUCKET" \
-              --server-side-encryption-configuration \
-              '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-          }
-          terraform init -backend-config="bucket=${BUCKET}"
-
-      - name: Apply infra (VPC + EKS + RDS + module.k8s)
-        run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
-
-      - name: Apply kubernetes manifests
-        run: terraform apply -auto-approve
-
-  deploy-prod:
-    needs: deploy-hml
-    if: needs.deploy-hml.result == 'success'
-    runs-on: ubuntu-latest
-    environment: production
-    defaults:
-      run:
-        working-directory: prod
-    env:
-      TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
-      TF_VAR_db_app_password:    ${{ secrets.DB_PASSWORD_PROD }}
-      TF_VAR_ghcr_token:         ${{ secrets.GHCR_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
-
-      - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: "~1.10" }
-
-      - name: Init
-        run: |
-          BUCKET="auto-repair-shop-tfstate-$(aws sts get-caller-identity --query Account --output text)"
-          terraform init -backend-config="bucket=${BUCKET}"
-
-      - name: Apply infra (VPC + EKS + RDS + module.k8s)
-        run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
-
-      - name: Apply kubernetes manifests
-        run: terraform apply -auto-approve
+  prod:
+    needs: hml
+    uses: ./.github/workflows/terraform-apply.yaml
+    with:
+      environment: prod
+      gh_environment: production
+    secrets:
+      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN:     ${{ secrets.AWS_SESSION_TOKEN }}
+      db_master_password:    ${{ secrets.DB_MASTER_PASSWORD }}
+      db_order_password:     ${{ secrets.DB_PASSWORD_PROD }}
+      db_billing_password:   ${{ secrets.DB_BILLING_PASSWORD_PROD }}
+      ghcr_token:            ${{ secrets.GHCR_TOKEN }}

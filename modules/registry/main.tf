@@ -1,19 +1,9 @@
-locals {
-  common_tags = {
-    Environment = var.environment
-    Application = "auto-repair-shop"
-    ManagedBy   = "terraform"
-  }
-}
+data "aws_caller_identity" "current" {}
 
-# Secrets Manager entry holding the GHCR credentials in the JSON shape ECR PTC expects:
-#   { "username": "...", "accessToken": "..." }
-# Name MUST live under the prefix "ecr-pullthroughcache/" (AWS hard requirement).
 resource "aws_secretsmanager_secret" "ghcr" {
   name                    = "ecr-pullthroughcache/auto-repair-shop-${var.environment}"
   description             = "GHCR token used by ECR Pull Through Cache to fetch Lambda images"
   recovery_window_in_days = 0
-  tags                    = local.common_tags
 }
 
 resource "aws_secretsmanager_secret_version" "ghcr" {

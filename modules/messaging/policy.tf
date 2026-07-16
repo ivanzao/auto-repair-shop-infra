@@ -11,7 +11,10 @@ resource "aws_sqs_queue_policy" "email" {
         Resource  = aws_sqs_queue.email.arn
         Condition = {
           ArnEquals = {
-            "aws:SourceArn" = aws_sns_topic.events.arn
+            "aws:SourceArn" = [
+              aws_sns_topic.events.arn,
+              aws_sns_topic.saga["billing"].arn,
+            ]
           }
         }
       }

@@ -9,8 +9,6 @@ locals {
 resource "aws_s3_bucket" "loki" {
   bucket        = "${local.bucket_prefix}-loki-${var.caller_account_id}"
   force_destroy = true
-
-  tags = local.common_tags
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "loki" {
@@ -31,8 +29,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "loki" {
 resource "aws_s3_bucket" "tempo" {
   bucket        = "${local.bucket_prefix}-tempo-${var.caller_account_id}"
   force_destroy = true
-
-  tags = local.common_tags
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "tempo" {
