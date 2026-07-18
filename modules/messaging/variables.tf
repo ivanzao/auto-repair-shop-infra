@@ -13,7 +13,7 @@ variable "lambda_sg_id" {
   type        = string
 }
 
-variable "lambda_image_base" {
-  description = "Base ECR path for Lambda images, from modules/registry (lambda_image_base output)."
+variable "lambda_placeholder_image" {
+  description = "Placeholder Lambda image used at create time; app CI overrides the real image via update-function-code (image_uri is ignored)."
   type        = string
 }

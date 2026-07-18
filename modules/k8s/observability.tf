@@ -2,7 +2,7 @@ resource "helm_release" "otel_operator" {
   name             = "opentelemetry-operator"
   repository       = "https://open-telemetry.github.io/opentelemetry-helm-charts"
   chart            = "opentelemetry-operator"
-  version          = "0.75.0"
+  version          = "0.95.0"
   namespace        = "observability"
   create_namespace = false
   timeout          = 300

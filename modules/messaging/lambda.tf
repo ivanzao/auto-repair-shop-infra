@@ -1,7 +1,7 @@
 resource "aws_lambda_function" "email" {
   function_name                  = "auto-repair-shop-email-${var.environment}"
   package_type                   = "Image"
-  image_uri                      = "${var.lambda_image_base}/auto-repair-shop-email:latest"
+  image_uri                      = var.lambda_placeholder_image
   role                           = local.lab_role_arn
   architectures                  = ["arm64"]
   timeout                        = 30

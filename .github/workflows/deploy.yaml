@@ -27,17 +27,18 @@ jobs:
       db_billing_password:   ${{ secrets.DB_BILLING_PASSWORD_HML }}
       ghcr_token:            ${{ secrets.GHCR_TOKEN }}
 
-  prod:
-    needs: hml
-    uses: ./.github/workflows/terraform-apply.yaml
-    with:
-      environment: prod
-      gh_environment: production
-    secrets:
-      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN:     ${{ secrets.AWS_SESSION_TOKEN }}
-      db_master_password:    ${{ secrets.DB_MASTER_PASSWORD }}
-      db_order_password:     ${{ secrets.DB_PASSWORD_PROD }}
-      db_billing_password:   ${{ secrets.DB_BILLING_PASSWORD_PROD }}
-      ghcr_token:            ${{ secrets.GHCR_TOKEN }}
+  # prod job desabilitado temporariamente para o teste greenfield do hml (branch deploy-hml-test).
+  # prod:
+  #   needs: hml
+  #   uses: ./.github/workflows/terraform-apply.yaml
+  #   with:
+  #     environment: prod
+  #     gh_environment: production
+  #   secrets:
+  #     AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #     AWS_SESSION_TOKEN:     ${{ secrets.AWS_SESSION_TOKEN }}
+  #     db_master_password:    ${{ secrets.DB_MASTER_PASSWORD }}
+  #     db_order_password:     ${{ secrets.DB_PASSWORD_PROD }}
+  #     db_billing_password:   ${{ secrets.DB_BILLING_PASSWORD_PROD }}
+  #     ghcr_token:            ${{ secrets.GHCR_TOKEN }}

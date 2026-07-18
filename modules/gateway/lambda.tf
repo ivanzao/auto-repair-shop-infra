@@ -1,7 +1,7 @@
 resource "aws_lambda_function" "login" {
   function_name = "auto-repair-shop-login-${var.environment}"
   package_type  = "Image"
-  image_uri     = "${var.lambda_image_base}/auto-repair-shop-login:latest"
+  image_uri     = var.lambda_placeholder_image
   role          = local.lab_role_arn
   architectures = ["arm64"]
   timeout       = 15
@@ -28,7 +28,7 @@ resource "aws_lambda_function" "login" {
 resource "aws_lambda_function" "authorizer" {
   function_name = "auto-repair-shop-authorizer-${var.environment}"
   package_type  = "Image"
-  image_uri     = "${var.lambda_image_base}/auto-repair-shop-authorizer:latest"
+  image_uri     = var.lambda_placeholder_image
   role          = local.lab_role_arn
   architectures = ["arm64"]
   timeout       = 5

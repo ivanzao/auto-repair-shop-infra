@@ -26,10 +26,6 @@ resource "aws_launch_template" "node" {
     http_put_response_hop_limit = 2
   }
 
-  tag_specifications {
-    resource_type = "instance"
-  }
-
   lifecycle {
     create_before_destroy = true
   }

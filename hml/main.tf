@@ -137,25 +137,25 @@ module "registry" {
 }
 
 module "gateway" {
-  source               = "../modules/gateway"
-  environment          = var.environment
-  private_subnet_ids   = module.vpc.private_subnet_ids
-  lambda_sg_id         = module.vpc.lambda_sg_id
-  eks_cluster_sg_id    = module.eks.cluster_sg_id
-  vpc_id               = module.vpc.vpc_id
-  node_group_asg_names = module.eks.node_group_asg_names
-  lambda_image_base    = module.registry.lambda_image_base
-  db_secret_arn        = module.rds["order"].secret_arn_app
+  source                   = "../modules/gateway"
+  environment              = var.environment
+  private_subnet_ids       = module.vpc.private_subnet_ids
+  lambda_sg_id             = module.vpc.lambda_sg_id
+  eks_cluster_sg_id        = module.eks.cluster_sg_id
+  vpc_id                   = module.vpc.vpc_id
+  node_group_asg_names     = module.eks.node_group_asg_names
+  lambda_placeholder_image = module.registry.lambda_placeholder_image
+  db_secret_arn            = module.rds["order"].secret_arn_app
 
   depends_on = [module.k8s, module.registry]
 }
 
 module "messaging" {
-  source             = "../modules/messaging"
-  environment        = var.environment
-  private_subnet_ids = module.vpc.private_subnet_ids
-  lambda_sg_id       = module.vpc.lambda_sg_id
-  lambda_image_base  = module.registry.lambda_image_base
+  source                   = "../modules/messaging"
+  environment              = var.environment
+  private_subnet_ids       = module.vpc.private_subnet_ids
+  lambda_sg_id             = module.vpc.lambda_sg_id
+  lambda_placeholder_image = module.registry.lambda_placeholder_image
 
   depends_on = [module.registry]
 }
