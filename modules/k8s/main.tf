@@ -20,8 +20,9 @@ resource "kubernetes_namespace" "observability" {
 }
 
 resource "kubernetes_service_account" "app" {
+  for_each = toset(["auto-repair-shop", "auto-repair-shop-billing", "auto-repair-shop-execution"])
   metadata {
-    name      = "auto-repair-shop"
+    name      = each.value
     namespace = local.app_namespace
     annotations = {
       "eks.amazonaws.com/role-arn" = local.lab_role_arn
