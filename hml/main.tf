@@ -34,6 +34,13 @@ locals {
       app_db_username    = "app_billing_${var.environment}"
       db_app_password    = var.db_billing_app_password
     }
+    user = {
+      db_identifier      = "auto-repair-shop-user-${var.environment}-db"
+      secret_name_prefix = "auto-repair-shop-user"
+      app_db_name        = "auto_repair_shop_user_${var.environment}"
+      app_db_username    = "app_user_${var.environment}"
+      db_app_password    = var.db_user_app_password
+    }
   }
 }
 
@@ -119,6 +126,11 @@ module "k8s" {
   db_billing_app_password = var.db_billing_app_password
   billing_db_name         = module.rds["billing"].db_name
   billing_db_role         = module.rds["billing"].db_role_name
+
+  rds_user_endpoint    = module.rds["user"].rds_endpoint
+  db_user_app_password = var.db_user_app_password
+  user_db_name         = module.rds["user"].db_name
+  user_db_role         = module.rds["user"].db_role_name
 
   depends_on = [module.eks, module.rds]
 }

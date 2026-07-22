@@ -105,3 +105,24 @@ variable "billing_db_role" {
   description = "Billing service database role (from module.rds_billing output)"
   type        = string
 }
+
+variable "rds_user_endpoint" {
+  description = "Endpoint da instância RDS do banco de identidade (login lambda)"
+  type        = string
+}
+
+variable "db_user_app_password" {
+  description = "Senha do usuário de aplicação do banco de identidade (login lambda)"
+  type        = string
+  sensitive   = true
+}
+
+variable "user_db_name" {
+  description = "Identity database name (from module.rds user output)"
+  type        = string
+}
+
+variable "user_db_role" {
+  description = "Identity database role (from module.rds user output)"
+  type        = string
+}

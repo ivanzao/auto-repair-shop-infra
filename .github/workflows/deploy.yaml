@@ -25,6 +25,7 @@ jobs:
       db_master_password:    ${{ secrets.DB_MASTER_PASSWORD }}
       db_order_password:     ${{ secrets.DB_PASSWORD_HML }}
       db_billing_password:   ${{ secrets.DB_BILLING_PASSWORD_HML }}
+      db_user_password:      ${{ secrets.DB_USER_PASSWORD_HML }}
       ghcr_token:            ${{ secrets.GHCR_TOKEN }}
 
   # prod job desabilitado temporariamente para o teste greenfield do hml (branch deploy-hml-test).

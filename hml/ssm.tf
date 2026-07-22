@@ -17,3 +17,10 @@ resource "aws_ssm_parameter" "billing_db_secret_arn" {
   value       = module.rds["billing"].secret_arn_app
   description = "ARN do Secrets Manager com credenciais do billing (JSON: host, port, dbname, username, password)"
 }
+
+resource "aws_ssm_parameter" "user_db_secret_arn" {
+  name        = "/auto-repair-shop/${var.environment}/user/db/secret-arn"
+  type        = "String"
+  value       = module.rds["user"].secret_arn_app
+  description = "ARN do Secrets Manager com credenciais do banco de identidade / login (JSON: host, port, dbname, username, password)"
+}

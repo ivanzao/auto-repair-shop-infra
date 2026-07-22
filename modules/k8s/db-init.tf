@@ -18,6 +18,12 @@ locals {
       db       = var.billing_db_name
       pw       = var.db_billing_app_password
     }
+    user = {
+      endpoint = var.rds_user_endpoint
+      role     = var.user_db_role
+      db       = var.user_db_name
+      pw       = var.db_user_app_password
+    }
   }
 }
 

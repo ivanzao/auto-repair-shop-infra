@@ -18,6 +18,7 @@ on:
       db_master_password:    { required: true }
       db_order_password:     { required: true }
       db_billing_password:   { required: true }
+      db_user_password:      { required: true }
       ghcr_token:            { required: true }
 
 permissions:
@@ -35,6 +36,7 @@ jobs:
       TF_VAR_db_master_password:      ${{ secrets.db_master_password }}
       TF_VAR_db_order_app_password:   ${{ secrets.db_order_password }}
       TF_VAR_db_billing_app_password: ${{ secrets.db_billing_password }}
+      TF_VAR_db_user_app_password:    ${{ secrets.db_user_password }}
       TF_VAR_ghcr_token:              ${{ secrets.ghcr_token }}
     steps:
       - uses: actions/checkout@v4
