@@ -10,6 +10,6 @@ module "infra" {
   db_master_password      = var.db_master_password
   db_order_app_password   = var.db_order_app_password
   db_billing_app_password = var.db_billing_app_password
-  db_user_app_password    = var.db_user_app_password
+  db_auth_app_password    = var.db_auth_app_password
   ghcr_token              = var.ghcr_token
 }

@@ -55,3 +55,8 @@ variable "app_db_passwords" {
   type        = map(string)
   sensitive   = true
 }
+
+variable "app_services" {
+  description = "Nomes curtos dos serviços que rodam no EKS (uma service account por serviço)"
+  type        = set(string)
+}

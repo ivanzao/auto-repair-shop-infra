@@ -28,6 +28,14 @@ variable "node_group_asg_names" {
   type        = list(string)
 }
 
+variable "http_services" {
+  description = "Serviços HTTP e seus ports NLB, keyed por nome de serviço"
+  type = map(object({
+    node_port     = number
+    listener_port = number
+  }))
+}
+
 variable "lambda_placeholder_image" {
   description = "Placeholder Lambda image used at create time; app CI overrides the real image via update-function-code (image_uri is ignored)."
   type        = string

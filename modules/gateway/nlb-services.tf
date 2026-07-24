@@ -1,29 +1,6 @@
 locals {
-  # NodePorts são convenção interna (contrato com os manifests dos apps), não
-  # config de ambiente — por isso vivem aqui como literais, não como variáveis.
-  node_ports = {
-    order     = 30080
-    billing   = 30081
-    execution = 30082
-  }
-
-  services = {
-    order = {
-      tg_name       = local.app_target_group_name
-      node_port     = local.node_ports.order
-      listener_port = 80
-    }
-    billing = {
-      tg_name       = "auto-repair-shop-billing-${var.environment}"
-      node_port     = local.node_ports.billing
-      listener_port = 8081
-    }
-    execution = {
-      tg_name       = "auto-repair-shop-execution-${var.environment}"
-      node_port     = local.node_ports.execution
-      listener_port = 8082
-    }
-  }
+  services   = var.http_services
+  node_ports = { for k, v in var.http_services : k => v.node_port }
 
   service_asg_attachments = {
     for pair in setproduct(keys(local.services), var.node_group_asg_names) :
@@ -34,7 +11,7 @@ locals {
 resource "aws_lb_target_group" "service" {
   for_each = local.services
 
-  name                 = each.value.tg_name
+  name                 = "auto-repair-shop-${each.key}-${var.environment}"
   port                 = each.value.node_port
   protocol             = "TCP"
   target_type          = "instance"
@@ -52,7 +29,7 @@ resource "aws_lb_target_group" "service" {
     unhealthy_threshold = 3
   }
 
-  tags = { Name = each.value.tg_name }
+  tags = { Name = "auto-repair-shop-${each.key}-${var.environment}" }
 }
 
 resource "aws_autoscaling_attachment" "service" {

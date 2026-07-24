@@ -38,40 +38,20 @@ resource "aws_lambda_permission" "apigw_login" {
   source_arn    = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
 }
 
-resource "aws_apigatewayv2_route" "order_protected" {
+resource "aws_apigatewayv2_route" "protected" {
+  for_each = local.services
+
   api_id             = aws_apigatewayv2_api.this.id
-  route_key          = "ANY /v1/{proxy+}"
-  target             = "integrations/${aws_apigatewayv2_integration.svc["order"].id}"
+  route_key          = "ANY /${each.key}/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.protected[each.key].id}"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
   authorization_type = "CUSTOM"
 }
 
-resource "aws_apigatewayv2_route" "quote_approve" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /v1/orders/quote/approve"
-  target    = "integrations/${aws_apigatewayv2_integration.svc["order_public"].id}"
-}
+resource "aws_apigatewayv2_route" "public" {
+  for_each = local.public_routes
 
-resource "aws_apigatewayv2_route" "health" {
   api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /health"
-  target    = "integrations/${aws_apigatewayv2_integration.svc["order_public"].id}"
-}
-
-resource "aws_apigatewayv2_route" "swagger_root" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /swagger"
-  target    = "integrations/${aws_apigatewayv2_integration.svc["order_public"].id}"
-}
-
-resource "aws_apigatewayv2_route" "swagger_proxy" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /swagger/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.svc["order_public"].id}"
-}
-
-resource "aws_apigatewayv2_route" "quote_decline" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /v1/orders/quote/decline"
-  target    = "integrations/${aws_apigatewayv2_integration.svc["order_public"].id}"
+  route_key = each.value.route_key
+  target    = "integrations/${aws_apigatewayv2_integration.public[each.key].id}"
 }

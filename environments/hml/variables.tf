@@ -44,8 +44,8 @@ variable "db_billing_app_password" {
   sensitive   = true
 }
 
-variable "db_user_app_password" {
-  description = "Identity (login) DB user password"
+variable "db_auth_app_password" {
+  description = "Identity/auth (login) DB user password"
   type        = string
   sensitive   = true
 }

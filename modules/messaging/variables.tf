@@ -3,6 +3,11 @@ variable "environment" {
   type        = string
 }
 
+variable "services" {
+  description = "Nomes dos serviços que participam do event bus (topic + queue + subscriptions full-mesh)"
+  type        = set(string)
+}
+
 variable "private_subnet_ids" {
   description = "Private subnet IDs where the email Lambda runs (VPC config)."
   type        = list(string)

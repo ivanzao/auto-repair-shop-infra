@@ -1,5 +1,7 @@
-resource "aws_dynamodb_table" "execution" {
-  name         = "auto-repair-shop-execution-${var.environment}"
+resource "aws_dynamodb_table" "service" {
+  for_each = var.services
+
+  name         = "auto-repair-shop-${each.key}-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "pk"
   range_key    = "sk"
@@ -30,7 +32,9 @@ resource "aws_dynamodb_table" "execution" {
 }
 
 resource "aws_ssm_parameter" "table_name" {
-  name  = "/auto-repair-shop/${var.environment}/execution/dynamodb/table-name"
+  for_each = var.services
+
+  name  = "/auto-repair-shop/${var.environment}/${each.key}/dynamodb/table-name"
   type  = "String"
-  value = aws_dynamodb_table.execution.name
+  value = aws_dynamodb_table.service[each.key].name
 }

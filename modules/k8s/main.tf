@@ -18,7 +18,7 @@ resource "kubernetes_namespace" "observability" {
 }
 
 resource "kubernetes_service_account" "app" {
-  for_each = toset(["auto-repair-shop", "auto-repair-shop-billing", "auto-repair-shop-execution"])
+  for_each = var.app_services
   metadata {
     name      = each.value
     namespace = local.app_namespace

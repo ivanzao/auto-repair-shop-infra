@@ -47,7 +47,7 @@ jobs:
       TF_VAR_db_master_password:      ${{ secrets.DB_MASTER_PASSWORD }}
       TF_VAR_db_order_app_password:   ${{ secrets.DB_PASSWORD_HML }}
       TF_VAR_db_billing_app_password: ${{ secrets.DB_BILLING_PASSWORD_HML }}
-      TF_VAR_db_user_app_password:    ${{ secrets.DB_USER_PASSWORD_HML }}
+      TF_VAR_db_auth_app_password:    ${{ secrets.DB_AUTH_PASSWORD_HML }}
       TF_VAR_ghcr_token:              ${{ secrets.GHCR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +96,7 @@ jobs:
       TF_VAR_db_master_password:      ${{ secrets.DB_MASTER_PASSWORD }}
       TF_VAR_db_order_app_password:   ${{ secrets.DB_PASSWORD_PROD }}
       TF_VAR_db_billing_app_password: ${{ secrets.DB_BILLING_PASSWORD_PROD }}
-      TF_VAR_db_user_app_password:    ${{ secrets.DB_USER_PASSWORD_PROD }}
+      TF_VAR_db_auth_app_password:    ${{ secrets.DB_AUTH_PASSWORD_PROD }}
       TF_VAR_ghcr_token:              ${{ secrets.GHCR_TOKEN }}
     steps:
       - uses: actions/checkout@v4

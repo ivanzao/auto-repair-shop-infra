@@ -1,7 +1,6 @@
 locals {
   bucket_prefix = var.s3_bucket_prefix != "" ? var.s3_bucket_prefix : "auto-repair-shop-${var.environment}"
 
-  # Retention by env and signal — tighter in hml.
   loki_retention_days  = var.environment == "prod" ? 30 : 7
   tempo_retention_days = var.environment == "prod" ? 14 : 3
 }

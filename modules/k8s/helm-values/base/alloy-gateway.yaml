@@ -15,14 +15,38 @@ alloy:
   configMap:
     create: true
     content: |
-      // Receive OTLP from DaemonSet agents.
       otelcol.receiver.otlp "default" {
         grpc { endpoint = "0.0.0.0:4317" }
         http { endpoint = "0.0.0.0:4318" }
 
         output {
-          traces  = [otelcol.processor.batch.default.input]
+          traces  = [otelcol.processor.k8sattributes.default.input]
           metrics = [otelcol.processor.batch.default.input]
+        }
+      }
+
+      otelcol.processor.k8sattributes "default" {
+        pod_association {
+          source {
+            from = "resource_attribute"
+            name = "k8s.pod.ip"
+          }
+        }
+        pod_association {
+          source {
+            from = "connection"
+          }
+        }
+        extract {
+          metadata = ["k8s.namespace.name", "k8s.pod.name"]
+          label {
+            from     = "pod"
+            key      = "app"
+            tag_name = "service.name"
+          }
+        }
+        output {
+          traces = [otelcol.processor.batch.default.input]
         }
       }
 
@@ -33,7 +57,6 @@ alloy:
         }
       }
 
-      // Traces -> Tempo.
       otelcol.exporter.otlp "tempo" {
         client {
           endpoint = "tempo.observability.svc.cluster.local:4317"
@@ -41,8 +64,6 @@ alloy:
         }
       }
 
-      // OTel metrics -> Prometheus format -> remote_write to kube-prometheus-stack
-      // (Prometheus has enableRemoteWriteReceiver: true).
       otelcol.exporter.prometheus "kps" {
         forward_to = [prometheus.remote_write.kps.receiver]
       }

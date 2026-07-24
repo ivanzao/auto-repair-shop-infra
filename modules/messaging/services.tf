@@ -1,13 +1,10 @@
 locals {
-  services = toset(["order", "billing", "execution"])
+  services = var.services
 
   subscriptions = {
-    order-from-billing     = { queue = "order", topic = "billing" }
-    order-from-execution   = { queue = "order", topic = "execution" }
-    billing-from-order     = { queue = "billing", topic = "order" }
-    billing-from-execution = { queue = "billing", topic = "execution" }
-    execution-from-order   = { queue = "execution", topic = "order" }
-    execution-from-billing = { queue = "execution", topic = "billing" }
+    for pair in setproduct(tolist(var.services), tolist(var.services)) :
+    "${pair[0]}-from-${pair[1]}" => { queue = pair[0], topic = pair[1] }
+    if pair[0] != pair[1]
   }
 }
 
@@ -19,7 +16,7 @@ resource "aws_sns_topic" "service" {
 resource "aws_sqs_queue" "queue_dlq" {
   for_each                  = local.services
   name                      = "auto-repair-shop-${each.key}-queue-dlq-${var.environment}"
-  message_retention_seconds = 1209600 # 14 dias
+  message_retention_seconds = 1209600
 }
 
 resource "aws_sqs_queue" "queue" {

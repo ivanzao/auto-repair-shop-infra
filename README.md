@@ -13,8 +13,8 @@ environments/
 modules/        # Composição: instancia os módulos abaixo (main.tf, variables.tf, ssm.tf, ...)
   vpc/          # VPC, subnets (for_each por AZ), IGW, NAT Gateway
   eks/          # Cluster EKS 1.32 + nodegroup t3.medium
-  rds/          # RDS PostgreSQL 16 + Secrets Manager (genérico: order, billing e user)
-  execution-db/ # Tabela DynamoDB do execution service
+  rds/          # RDS PostgreSQL 16 + Secrets Manager (genérico, por serviço: order, billing, auth)
+  execution-db/ # Tabelas DynamoDB (genérico, schema padrão single-table por serviço)
   k8s/          # Namespaces, ALB Controller, observabilidade (Helm), init do banco
   gateway/      # API Gateway HTTP API, Lambda Authorizer, VPC Link, NLB
   messaging/    # SNS, SQS, Lambda email
@@ -40,7 +40,7 @@ Internet
     ▼
 AWS API Gateway HTTP API
     ├── POST /auth/login ──────────────► Lambda login (CPF + bcrypt → JWT)
-    └── ANY /v1/{proxy+} ──► Lambda authorizer ──► VPC Link ──► NLB ──► EKS
+    └── ANY /{service}/{proxy+} ──► Lambda authorizer ──► VPC Link ──► NLB ──► EKS
                                                                          │
                                                                        App pod
                                                                          │
@@ -50,6 +50,10 @@ AWS API Gateway HTTP API
 ```
 
 O app não conhece o segredo JWT — o Lambda Authorizer valida o token e injeta `X-User-Id` e `X-User-Role` como headers antes de encaminhar para os pods.
+
+### Roteamento por serviço
+
+O API Gateway roteia por prefixo de serviço: cada serviço HTTP recebe uma rota protegida `ANY /{service}/{proxy+}` (com authorizer) e o gateway faz strip do prefixo `/{service}` antes de encaminhar — a app serve na própria raiz e versiona como quiser. Rotas públicas (login, webhook do Mercado Pago, aprovação/recusa de quote, swagger, health) são declaradas explicitamente. A lista de serviços é derivada de um registry único em `modules/locals.tf` — adicionar um serviço é uma entrada nesse mapa.
 
 ### Observabilidade
 
@@ -124,7 +128,7 @@ O primeiro deploy exige dois passes (targets específicos, depois apply completo
 | `DB_MASTER_PASSWORD` | Senha do usuário master do RDS |
 | `DB_PASSWORD_HML` / `DB_PASSWORD_PROD` | Senhas da aplicação (order) por ambiente |
 | `DB_BILLING_PASSWORD_HML` / `DB_BILLING_PASSWORD_PROD` | Senhas da aplicação do billing por ambiente |
-| `DB_USER_PASSWORD_HML` / `DB_USER_PASSWORD_PROD` | Senhas da aplicação do banco de identidade (login) por ambiente |
+| `DB_AUTH_PASSWORD_HML` / `DB_AUTH_PASSWORD_PROD` | Senhas da aplicação do banco de identidade / auth (login) por ambiente |
 | `GHCR_TOKEN` | PAT para pull de imagens do GHCR |
 
 ---
@@ -136,11 +140,12 @@ Os outros repos consomem outputs da infra via SSM — sem `terraform_remote_stat
 | Parâmetro | Publicado por | Conteúdo |
 |---|---|---|
 | `/auto-repair-shop/{env}/eks/cluster-name` | `modules/` | Nome do cluster EKS |
-| `/auto-repair-shop/{env}/{order\|billing\|user}/db/secret-arn` | `modules/` | ARN do secret de credenciais de cada banco (JSON com host, port, dbname, user, password) |
+| `/auto-repair-shop/{env}/{order\|billing\|auth}/db/secret-arn` | `modules/` | ARN do secret de credenciais de cada banco (JSON com host, port, dbname, user, password) |
 | `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
+| `/auto-repair-shop/{env}/{service}/node-port` | `modules/gateway` | NodePort que a `Service` de cada app deve expor (fonte única — a app lê daqui) |
 | `/auto-repair-shop/{env}/sns/{order\|billing\|execution}-events-topic-arn` | `modules/messaging` | ARN do tópico de eventos de cada serviço |
 | `/auto-repair-shop/{env}/sqs/{order\|billing\|execution}-queue-url` | `modules/messaging` | URL da fila (inbox) de cada serviço — assina os tópicos dos outros dois |
-| `/auto-repair-shop/{env}/execution/dynamodb/table-name` | `modules/execution-db` | Nome da tabela DynamoDB do execution service |
+| `/auto-repair-shop/{env}/{service}/dynamodb/table-name` | `modules/execution-db` | Nome da tabela DynamoDB de cada serviço com `dynamo = true` (schema padrão single-table) |
 | `/auto-repair-shop/{env}/eso/cluster-secret-store-name` | `modules/k8s` | Nome do ClusterSecretStore do External Secrets Operator que os `ExternalSecret` dos apps devem referenciar |
 
 > O secret do Mercado Pago é entregue **pelo nome** (`auto-repair-shop/{env}/mercadopago`) e consumido via ESO pelo billing — não há SSM param para ele. A infra cria o "shell" do secret; o valor é populado pelo CI do repo do billing.

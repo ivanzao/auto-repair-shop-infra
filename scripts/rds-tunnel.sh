@@ -24,7 +24,6 @@ NAMESPACE="auto-repair-shop-$ENV"
 POD_NAME="rds-tunnel-$$"
 LOCAL_PORT=5432
 
-# ── credenciais AWS ─────────────────────────────────────────────────────────
 echo "→ buscando credenciais do RDS ($ENV)..."
 
 SECRET_ARN=$(aws ssm get-parameter \
@@ -41,7 +40,6 @@ DB_NAME=$(echo "$SECRET_JSON"  | jq -r .dbname)
 DB_USER=$(echo "$SECRET_JSON"  | jq -r .username)
 DB_PASS=$(echo "$SECRET_JSON"  | jq -r .password)
 
-# ── kubeconfig ──────────────────────────────────────────────────────────────
 CLUSTER_NAME=$(aws ssm get-parameter \
   --name "/auto-repair-shop/$ENV/eks/cluster-name" \
   --query Parameter.Value --output text)
@@ -49,7 +47,6 @@ CLUSTER_NAME=$(aws ssm get-parameter \
 echo "→ atualizando kubeconfig para $CLUSTER_NAME..."
 aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "${AWS_DEFAULT_REGION:-us-east-1}" 2>/dev/null
 
-# ── cleanup ao sair ─────────────────────────────────────────────────────────
 cleanup() {
   echo ""
   echo "→ removendo pod $POD_NAME..."
@@ -57,7 +54,6 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# ── pod socat ───────────────────────────────────────────────────────────────
 echo "→ criando pod tunnel ($POD_NAME)..."
 kubectl run "$POD_NAME" \
   --image=alpine/socat \
@@ -71,7 +67,6 @@ kubectl wait pod "$POD_NAME" \
   --namespace="$NAMESPACE" \
   --timeout=30s >/dev/null
 
-# ── port-forward ─────────────────────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
 echo "║  Tunnel ativo — conecte com qualquer client:        ║"

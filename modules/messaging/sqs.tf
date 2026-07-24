@@ -1,6 +1,6 @@
 resource "aws_sqs_queue" "email_dlq" {
   name                      = "auto-repair-shop-email-dlq-${var.environment}"
-  message_retention_seconds = 1209600 # 14 days
+  message_retention_seconds = 1209600
 }
 
 resource "aws_sqs_queue" "email" {

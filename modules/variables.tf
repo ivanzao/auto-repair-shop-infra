@@ -80,8 +80,8 @@ variable "db_billing_app_password" {
   sensitive   = true
 }
 
-variable "db_user_app_password" {
-  description = "Senha do usuário de aplicação do banco de identidade (login lambda)"
+variable "db_auth_app_password" {
+  description = "Senha do usuário de aplicação do banco de identidade / auth (login lambda)"
   type        = string
   sensitive   = true
 }

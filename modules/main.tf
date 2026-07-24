@@ -22,7 +22,7 @@ module "eks" {
 
 module "rds" {
   source   = "./rds"
-  for_each = local.db_app_passwords
+  for_each = local.db_services
 
   environment          = var.environment
   db_identifier        = "auto-repair-shop-${each.key}-${var.environment}-db"
@@ -39,7 +39,7 @@ module "rds" {
   skip_final_snapshot         = true
   secret_recovery_window_days = 0
   secret_name_prefix          = "auto-repair-shop-${each.key}"
-  db_app_password             = each.value
+  db_app_password             = local.db_app_passwords[each.key]
   app_db_name                 = "auto_repair_shop_${each.key}_${var.environment}"
   app_db_username             = "app_${each.key}_${var.environment}"
 }
@@ -63,8 +63,7 @@ resource "kubernetes_manifest" "otel_instrumentation" {
       }
       resource = {
         resourceAttributes = {
-          "service.name" = "auto-repair-shop"
-          "environment"  = var.environment
+          "environment" = var.environment
         }
       }
       java = {
@@ -98,6 +97,7 @@ module "k8s" {
     }
   }
   app_db_passwords = local.db_app_passwords
+  app_services     = toset(keys(local.http_services))
 
   depends_on = [module.eks, module.rds]
 }
@@ -105,6 +105,7 @@ module "k8s" {
 module "execution_db" {
   source      = "./execution-db"
   environment = var.environment
+  services    = toset(keys(local.dynamo_services))
 }
 
 module "registry" {
@@ -123,8 +124,9 @@ module "gateway" {
   eks_cluster_sg_id        = module.eks.cluster_sg_id
   vpc_id                   = module.vpc.vpc_id
   node_group_asg_names     = module.eks.node_group_asg_names
+  http_services            = local.http_ports
   lambda_placeholder_image = module.registry.lambda_placeholder_image
-  db_secret_arn            = module.rds["user"].secret_arn_app
+  db_secret_arn            = module.rds["auth"].secret_arn_app
 
   depends_on = [module.k8s, module.registry]
 }
@@ -132,6 +134,7 @@ module "gateway" {
 module "messaging" {
   source                   = "./messaging"
   environment              = var.environment
+  services                 = local.event_services
   private_subnet_ids       = module.vpc.private_subnet_ids
   lambda_sg_id             = module.vpc.lambda_sg_id
   lambda_placeholder_image = module.registry.lambda_placeholder_image
