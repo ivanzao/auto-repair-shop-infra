@@ -8,6 +8,11 @@ locals {
   }
 
   services = {
+    order = {
+      tg_name       = local.app_target_group_name
+      node_port     = local.node_ports.order
+      listener_port = 80
+    }
     billing = {
       tg_name       = "auto-repair-shop-billing-${var.environment}"
       node_port     = local.node_ports.billing

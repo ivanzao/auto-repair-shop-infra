@@ -29,34 +29,6 @@ variable "s3_bucket_prefix" {
   default     = ""
 }
 
-variable "rds_endpoint" {
-  description = "RDS Postgres endpoint (used by Grafana for state persistence)"
-  type        = string
-}
-
-variable "rds_port" {
-  description = "RDS Postgres port"
-  type        = number
-  default     = 5432
-}
-
-variable "grafana_db_name" {
-  description = "PostgreSQL database name for Grafana. Empty = derive from environment."
-  type        = string
-  default     = ""
-}
-
-variable "grafana_db_user" {
-  description = "PostgreSQL role name for Grafana. Empty = derive from environment."
-  type        = string
-  default     = ""
-}
-
-variable "grafana_db_password" {
-  description = "Grafana DB role password (hardcoded per ADR-002)"
-  type        = string
-}
-
 variable "grafana_admin_password" {
   description = "Grafana admin UI password (hardcoded per ADR-002)"
   type        = string
@@ -69,60 +41,17 @@ variable "db_master_password" {
   sensitive   = true
 }
 
-variable "db_order_app_password" {
-  description = "Order service DB role password"
-  type        = string
+variable "app_databases" {
+  description = "Per-service DB connection info (endpoint, role, db name) keyed by service name, consumed by the DB init Jobs"
+  type = map(object({
+    endpoint = string
+    role     = string
+    db       = string
+  }))
+}
+
+variable "app_db_passwords" {
+  description = "Per-service DB role passwords keyed by service name"
+  type        = map(string)
   sensitive   = true
-}
-
-variable "order_db_name" {
-  description = "Order service database name (from module.rds output)"
-  type        = string
-}
-
-variable "order_db_role" {
-  description = "Order service database role (from module.rds output)"
-  type        = string
-}
-
-variable "rds_billing_endpoint" {
-  description = "Endpoint da instância RDS do billing service"
-  type        = string
-}
-
-variable "db_billing_app_password" {
-  description = "Senha do usuário de aplicação do billing service"
-  type        = string
-  sensitive   = true
-}
-
-variable "billing_db_name" {
-  description = "Billing service database name (from module.rds_billing output)"
-  type        = string
-}
-
-variable "billing_db_role" {
-  description = "Billing service database role (from module.rds_billing output)"
-  type        = string
-}
-
-variable "rds_user_endpoint" {
-  description = "Endpoint da instância RDS do banco de identidade (login lambda)"
-  type        = string
-}
-
-variable "db_user_app_password" {
-  description = "Senha do usuário de aplicação do banco de identidade (login lambda)"
-  type        = string
-  sensitive   = true
-}
-
-variable "user_db_name" {
-  description = "Identity database name (from module.rds user output)"
-  type        = string
-}
-
-variable "user_db_role" {
-  description = "Identity database role (from module.rds user output)"
-  type        = string
 }

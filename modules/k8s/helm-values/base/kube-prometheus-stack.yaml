@@ -18,14 +18,6 @@ grafana:
 
   persistence:
     enabled: false
-  grafana.ini:
-    database:
-      type: postgres
-      host: ${rds_endpoint}:${rds_port}
-      name: ${grafana_db_name}
-      user: ${grafana_db_user}
-      password: ${grafana_db_password}
-      ssl_mode: require
 
   additionalDataSources:
     - name: Loki

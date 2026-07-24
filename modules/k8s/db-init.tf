@@ -1,28 +1,10 @@
 locals {
   db_init = {
-    grafana = {
-      endpoint = var.rds_endpoint
-      role     = "grafana_${var.environment}"
-      db       = "grafana_${var.environment}"
-      pw       = var.grafana_db_password
-    }
-    order = {
-      endpoint = var.rds_endpoint
-      role     = var.order_db_role
-      db       = var.order_db_name
-      pw       = var.db_order_app_password
-    }
-    billing = {
-      endpoint = var.rds_billing_endpoint
-      role     = var.billing_db_role
-      db       = var.billing_db_name
-      pw       = var.db_billing_app_password
-    }
-    user = {
-      endpoint = var.rds_user_endpoint
-      role     = var.user_db_role
-      db       = var.user_db_name
-      pw       = var.db_user_app_password
+    for name, cfg in var.app_databases : name => {
+      endpoint = cfg.endpoint
+      role     = cfg.role
+      db       = cfg.db
+      pw       = var.app_db_passwords[name]
     }
   }
 }

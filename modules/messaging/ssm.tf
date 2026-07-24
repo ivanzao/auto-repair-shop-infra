@@ -1,9 +1,3 @@
-resource "aws_ssm_parameter" "sqs_email_queue_arn" {
-  name  = "/auto-repair-shop/${var.environment}/sqs/email-queue-arn"
-  type  = "String"
-  value = aws_sqs_queue.email.arn
-}
-
 resource "aws_ssm_parameter" "topic_arn" {
   for_each = local.services
 

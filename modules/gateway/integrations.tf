@@ -3,8 +3,8 @@ locals {
   # identidade vindos do authorizer; as públicas não passam pelo authorizer.
   # A `login` (Lambda AWS_PROXY) não entra aqui — é outra forma de integração.
   gateway_integrations = {
-    order          = { listener_arn = aws_lb_listener.order.arn, protected = true }
-    order_public   = { listener_arn = aws_lb_listener.order.arn, protected = false }
+    order          = { listener_arn = aws_lb_listener.service["order"].arn, protected = true }
+    order_public   = { listener_arn = aws_lb_listener.service["order"].arn, protected = false }
     billing        = { listener_arn = aws_lb_listener.service["billing"].arn, protected = true }
     billing_public = { listener_arn = aws_lb_listener.service["billing"].arn, protected = false }
     execution      = { listener_arn = aws_lb_listener.service["execution"].arn, protected = true }

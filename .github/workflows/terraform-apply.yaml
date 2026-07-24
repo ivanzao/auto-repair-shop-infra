@@ -31,7 +31,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ inputs.environment }}
+        working-directory: environments/${{ inputs.environment }}
     env:
       TF_VAR_db_master_password:      ${{ secrets.db_master_password }}
       TF_VAR_db_order_app_password:   ${{ secrets.db_order_password }}
@@ -78,7 +78,7 @@ jobs:
           terraform init -backend-config="bucket=${BUCKET}"
 
       - name: Apply infra (VPC + EKS + RDS + module.k8s)
-        run: terraform apply -auto-approve -target=module.vpc -target=module.eks -target=module.rds -target=module.k8s
+        run: terraform apply -auto-approve -target=module.infra.module.vpc -target=module.infra.module.eks -target=module.infra.module.rds -target=module.infra.module.k8s
 
       - name: Apply kubernetes manifests
         run: terraform apply -auto-approve

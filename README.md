@@ -7,12 +7,13 @@ Terraform da infraestrutura completa do Auto Repair Shop na AWS — dois ambient
 ## Estrutura de Pastas
 
 ```
-hml/          # Root Terraform do ambiente HML
-prod/         # Root Terraform do ambiente PROD
-modules/
-  vpc/        # VPC, subnets, IGW, NAT Gateway
-  eks/        # Cluster EKS 1.32 + nodegroup t3.medium
-  rds/          # RDS PostgreSQL 16 + Secrets Manager (genérico: order e billing)
+environments/
+  hml/          # Root fino do ambiente HML (backend + providers + tfvars)
+  prod/         # Root fino do ambiente PROD
+modules/        # Composição: instancia os módulos abaixo (main.tf, variables.tf, ssm.tf, ...)
+  vpc/          # VPC, subnets (for_each por AZ), IGW, NAT Gateway
+  eks/          # Cluster EKS 1.32 + nodegroup t3.medium
+  rds/          # RDS PostgreSQL 16 + Secrets Manager (genérico: order, billing e user)
   execution-db/ # Tabela DynamoDB do execution service
   k8s/          # Namespaces, ALB Controller, observabilidade (Helm), init do banco
   gateway/      # API Gateway HTTP API, Lambda Authorizer, VPC Link, NLB
@@ -22,6 +23,8 @@ docs/adrs/       # Architecture Decision Records
 docs/diagrams/   # Diagrama de componentes da plataforma
 scripts/         # Tunnels para Grafana e RDS
 ```
+
+Cada ambiente é um root fino que só instancia `module "infra" { source = "../../modules" }` com seus tfvars — toda a lógica de wiring vive uma única vez em `modules/`.
 
 > **Nota sobre 3 repositórios:** o enunciado sugere repos separados para K8s Infra e BD Infra. Mantemos os dois consolidados aqui por limitação do AWS Academy — sem criação de roles IAM por sub-projeto, a separação não traz isolamento real. A decisão está detalhada em [ADR-004](docs/adrs/ADR-004-infra-monorepo.md).
 
@@ -97,8 +100,10 @@ Substitua `prod` por `hml` para o ambiente de homologação.
 
 O deploy é feito automaticamente pelo pipeline em `push` para `main`:
 
-1. Deploy HML — `terraform apply` em `hml/`
-2. Deploy PROD — executa somente se HML foi bem-sucedido
+1. Deploy HML — `terraform apply` em `environments/hml/`
+2. Deploy PROD — executa somente após **aprovação manual**, e só se HML foi bem-sucedido
+
+O ambiente `prod` é protegido por um GitHub Environment com **required reviewers** — nada é aplicado em produção sem aprovação. Configure em **Settings → Environments → `production` → Required reviewers**.
 
 O primeiro deploy exige dois passes (targets específicos, depois apply completo) por conta de dependências entre CRDs e manifests Kubernetes. O pipeline cuida disso automaticamente.
 
@@ -119,6 +124,7 @@ O primeiro deploy exige dois passes (targets específicos, depois apply completo
 | `DB_MASTER_PASSWORD` | Senha do usuário master do RDS |
 | `DB_PASSWORD_HML` / `DB_PASSWORD_PROD` | Senhas da aplicação (order) por ambiente |
 | `DB_BILLING_PASSWORD_HML` / `DB_BILLING_PASSWORD_PROD` | Senhas da aplicação do billing por ambiente |
+| `DB_USER_PASSWORD_HML` / `DB_USER_PASSWORD_PROD` | Senhas da aplicação do banco de identidade (login) por ambiente |
 | `GHCR_TOKEN` | PAT para pull de imagens do GHCR |
 
 ---
@@ -129,17 +135,15 @@ Os outros repos consomem outputs da infra via SSM — sem `terraform_remote_stat
 
 | Parâmetro | Publicado por | Conteúdo |
 |---|---|---|
-| `/auto-repair-shop/{env}/eks/cluster-name` | `hml/`, `prod/` | Nome do cluster EKS |
-| `/auto-repair-shop/{env}/order/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais do order (JSON com host, port, dbname, user, password) |
+| `/auto-repair-shop/{env}/eks/cluster-name` | `modules/` | Nome do cluster EKS |
+| `/auto-repair-shop/{env}/{order\|billing\|user}/db/secret-arn` | `modules/` | ARN do secret de credenciais de cada banco (JSON com host, port, dbname, user, password) |
 | `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
 | `/auto-repair-shop/{env}/sns/{order\|billing\|execution}-events-topic-arn` | `modules/messaging` | ARN do tópico de eventos de cada serviço |
 | `/auto-repair-shop/{env}/sqs/{order\|billing\|execution}-queue-url` | `modules/messaging` | URL da fila (inbox) de cada serviço — assina os tópicos dos outros dois |
-| `/auto-repair-shop/{env}/billing/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais do billing (JSON com host, port, dbname, user, password) |
-| `/auto-repair-shop/{env}/billing/mercadopago-secret-arn` | `hml/`, `prod/` | ARN do secret do Mercado Pago — shell criado pela infra; valor populado pelo CI do repo do billing |
 | `/auto-repair-shop/{env}/execution/dynamodb/table-name` | `modules/execution-db` | Nome da tabela DynamoDB do execution service |
-| `/auto-repair-shop/{env}/alb/{billing\|execution}-target-group-arn` | `modules/gateway` | Target group NLB de cada serviço (NodePorts 30081/30082, listeners 8081/8082) |
-| `/auto-repair-shop/{env}/{order\|billing\|execution}/node-port` | `modules/gateway` | NodePort que a `Service` de cada app deve expor (contrato com os manifests dos apps) |
 | `/auto-repair-shop/{env}/eso/cluster-secret-store-name` | `modules/k8s` | Nome do ClusterSecretStore do External Secrets Operator que os `ExternalSecret` dos apps devem referenciar |
+
+> O secret do Mercado Pago é entregue **pelo nome** (`auto-repair-shop/{env}/mercadopago`) e consumido via ESO pelo billing — não há SSM param para ele. A infra cria o "shell" do secret; o valor é populado pelo CI do repo do billing.
 
 ---
 

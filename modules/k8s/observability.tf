@@ -29,11 +29,6 @@ resource "helm_release" "kube_prometheus_stack" {
   values = [
     templatefile("${path.module}/helm-values/base/kube-prometheus-stack.yaml", {
       grafana_admin_password = var.grafana_admin_password
-      rds_endpoint           = var.rds_endpoint
-      rds_port               = var.rds_port
-      grafana_db_name        = local.grafana_db_name
-      grafana_db_user        = local.grafana_db_user
-      grafana_db_password    = var.grafana_db_password
     }),
     file("${path.module}/helm-values/base/alerts.yaml"),
     file("${path.module}/helm-values/${var.environment}/kube-prometheus-stack.yaml"),

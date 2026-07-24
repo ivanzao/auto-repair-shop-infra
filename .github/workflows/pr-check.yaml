@@ -27,10 +27,10 @@ jobs:
         with:
           filters: |
             hml:
-              - 'hml/**'
+              - 'environments/hml/**'
               - 'modules/**'
             prod:
-              - 'prod/**'
+              - 'environments/prod/**'
               - 'modules/**'
 
   plan-hml:
@@ -42,11 +42,13 @@ jobs:
       pull-requests: write
     defaults:
       run:
-        working-directory: hml
+        working-directory: environments/hml
     env:
       TF_VAR_db_master_password:      ${{ secrets.DB_MASTER_PASSWORD }}
       TF_VAR_db_order_app_password:   ${{ secrets.DB_PASSWORD_HML }}
       TF_VAR_db_billing_app_password: ${{ secrets.DB_BILLING_PASSWORD_HML }}
+      TF_VAR_db_user_app_password:    ${{ secrets.DB_USER_PASSWORD_HML }}
+      TF_VAR_ghcr_token:              ${{ secrets.GHCR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +66,7 @@ jobs:
         id: plan
         run: |
           BUCKET="auto-repair-shop-tfstate-$(aws sts get-caller-identity --query Account --output text)"
-          terraform fmt -check -recursive ../
+          terraform fmt -check -recursive ../../
           terraform init -backend-config="bucket=${BUCKET}"
           terraform validate
           terraform plan -no-color 2>&1 | tee plan.txt
@@ -73,7 +75,7 @@ jobs:
         if: always()
         with:
           script: |
-            const plan = require('fs').readFileSync('hml/plan.txt', 'utf8');
+            const plan = require('fs').readFileSync('environments/hml/plan.txt', 'utf8');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner, repo: context.repo.repo,
@@ -89,11 +91,13 @@ jobs:
       pull-requests: write
     defaults:
       run:
-        working-directory: prod
+        working-directory: environments/prod
     env:
       TF_VAR_db_master_password:      ${{ secrets.DB_MASTER_PASSWORD }}
       TF_VAR_db_order_app_password:   ${{ secrets.DB_PASSWORD_PROD }}
       TF_VAR_db_billing_app_password: ${{ secrets.DB_BILLING_PASSWORD_PROD }}
+      TF_VAR_db_user_app_password:    ${{ secrets.DB_USER_PASSWORD_PROD }}
+      TF_VAR_ghcr_token:              ${{ secrets.GHCR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -111,7 +115,7 @@ jobs:
         id: plan
         run: |
           BUCKET="auto-repair-shop-tfstate-$(aws sts get-caller-identity --query Account --output text)"
-          terraform fmt -check -recursive ../
+          terraform fmt -check -recursive ../../
           terraform init -backend-config="bucket=${BUCKET}"
           terraform validate
           terraform plan -no-color 2>&1 | tee plan.txt
@@ -120,7 +124,7 @@ jobs:
         if: always()
         with:
           script: |
-            const plan = require('fs').readFileSync('prod/plan.txt', 'utf8');
+            const plan = require('fs').readFileSync('environments/prod/plan.txt', 'utf8');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner, repo: context.repo.repo,

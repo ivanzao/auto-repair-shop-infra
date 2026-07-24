@@ -7,33 +7,3 @@ resource "aws_security_group" "app_nlb" {
     Name = "${local.app_target_group_name}-nlb-sg"
   }
 }
-
-resource "aws_security_group_rule" "vpc_link_to_app_nlb" {
-  type                     = "ingress"
-  security_group_id        = aws_security_group.app_nlb.id
-  source_security_group_id = var.lambda_sg_id
-  from_port                = 80
-  to_port                  = 80
-  protocol                 = "tcp"
-  description              = "Allow API Gateway VPC Link to reach private app NLB"
-}
-
-resource "aws_security_group_rule" "app_nlb_to_eks" {
-  type                     = "egress"
-  security_group_id        = aws_security_group.app_nlb.id
-  source_security_group_id = var.eks_cluster_sg_id
-  from_port                = local.node_ports.order
-  to_port                  = local.node_ports.order
-  protocol                 = "tcp"
-  description              = "Allow private app NLB to forward traffic to EKS nodes on the order NodePort"
-}
-
-resource "aws_security_group_rule" "eks_from_app_nlb" {
-  type                     = "ingress"
-  security_group_id        = var.eks_cluster_sg_id
-  source_security_group_id = aws_security_group.app_nlb.id
-  from_port                = local.node_ports.order
-  to_port                  = local.node_ports.order
-  protocol                 = "tcp"
-  description              = "Allow EKS nodes to receive order NodePort traffic from private app NLB"
-}

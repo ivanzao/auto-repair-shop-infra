@@ -80,10 +80,10 @@ variable "db_billing_app_password" {
   sensitive   = true
 }
 
-variable "grafana_db_password" {
-  description = "Grafana DB role password (hardcoded per ADR-002)"
+variable "db_user_app_password" {
+  description = "Senha do usuário de aplicação do banco de identidade (login lambda)"
   type        = string
-  default     = "admin"
+  sensitive   = true
 }
 
 variable "grafana_admin_password" {

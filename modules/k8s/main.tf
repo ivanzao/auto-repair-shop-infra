@@ -1,8 +1,6 @@
 locals {
-  lab_role_arn    = "arn:aws:iam::${var.caller_account_id}:role/LabRole"
-  app_namespace   = "auto-repair-shop-${var.environment}"
-  grafana_db_name = var.grafana_db_name != "" ? var.grafana_db_name : "grafana_${var.environment}"
-  grafana_db_user = var.grafana_db_user != "" ? var.grafana_db_user : "grafana_${var.environment}"
+  lab_role_arn  = "arn:aws:iam::${var.caller_account_id}:role/LabRole"
+  app_namespace = "auto-repair-shop-${var.environment}"
 }
 
 resource "kubernetes_namespace" "app" {
