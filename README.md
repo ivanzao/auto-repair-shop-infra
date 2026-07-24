@@ -132,8 +132,7 @@ Os outros repos consomem outputs da infra via SSM — sem `terraform_remote_stat
 | `/auto-repair-shop/{env}/eks/cluster-name` | `hml/`, `prod/` | Nome do cluster EKS |
 | `/auto-repair-shop/{env}/order/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais do order (JSON com host, port, dbname, user, password) |
 | `/auto-repair-shop/{env}/apigw/endpoint` | `modules/gateway` | URL pública do API Gateway |
-| `/auto-repair-shop/{env}/sns/events-topic-arn` | `modules/messaging` | ARN do tópico SNS de eventos (legado, monólito) |
-| `/auto-repair-shop/{env}/sns/{order\|billing\|execution}-events-topic-arn` | `modules/messaging` | ARN do tópico de eventos de cada serviço (saga Fase 4) |
+| `/auto-repair-shop/{env}/sns/{order\|billing\|execution}-events-topic-arn` | `modules/messaging` | ARN do tópico de eventos de cada serviço |
 | `/auto-repair-shop/{env}/sqs/{order\|billing\|execution}-queue-url` | `modules/messaging` | URL da fila (inbox) de cada serviço — assina os tópicos dos outros dois |
 | `/auto-repair-shop/{env}/billing/db/secret-arn` | `hml/`, `prod/` | ARN do secret de credenciais do billing (JSON com host, port, dbname, user, password) |
 | `/auto-repair-shop/{env}/billing/mercadopago-secret-arn` | `hml/`, `prod/` | ARN do secret do Mercado Pago — shell criado pela infra; valor populado pelo CI do repo do billing |

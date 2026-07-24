@@ -12,3 +12,4 @@ crash.*.log
 .idea/
 *.swp
 /.claude/
+docs/superpowers/
