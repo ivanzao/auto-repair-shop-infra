@@ -4,15 +4,25 @@ on:
   pull_request:
     branches: [main]
 
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
 jobs:
   detect:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       hml:  ${{ steps.filter.outputs.hml }}
       prod: ${{ steps.filter.outputs.prod }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
         id: filter
         with:
           filters: |
@@ -27,12 +37,16 @@ jobs:
     needs: detect
     if: needs.detect.outputs.hml == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: hml
     env:
-      TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
-      TF_VAR_db_app_password:    ${{ secrets.DB_PASSWORD_HML }}
+      TF_VAR_db_master_password:      ${{ secrets.DB_MASTER_PASSWORD }}
+      TF_VAR_db_order_app_password:   ${{ secrets.DB_PASSWORD_HML }}
+      TF_VAR_db_billing_app_password: ${{ secrets.DB_BILLING_PASSWORD_HML }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +58,7 @@ jobs:
           aws-region: us-east-1
 
       - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: "~1.10" }
+        with: { terraform_version: "~> 1.10" }
 
       - name: Fmt + Validate + Plan HML
         id: plan
@@ -70,12 +84,16 @@ jobs:
     needs: detect
     if: needs.detect.outputs.prod == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: prod
     env:
-      TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
-      TF_VAR_db_app_password:    ${{ secrets.DB_PASSWORD_PROD }}
+      TF_VAR_db_master_password:      ${{ secrets.DB_MASTER_PASSWORD }}
+      TF_VAR_db_order_app_password:   ${{ secrets.DB_PASSWORD_PROD }}
+      TF_VAR_db_billing_app_password: ${{ secrets.DB_BILLING_PASSWORD_PROD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -87,7 +105,7 @@ jobs:
           aws-region: us-east-1
 
       - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: "~1.10" }
+        with: { terraform_version: "~> 1.10" }
 
       - name: Fmt + Validate + Plan PROD
         id: plan

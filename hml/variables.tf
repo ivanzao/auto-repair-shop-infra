@@ -1,3 +1,13 @@
+variable "environment" {
+  description = "Environment name (hml, prod)"
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -58,8 +68,20 @@ variable "db_master_password" {
   sensitive   = true
 }
 
-variable "db_app_password" {
+variable "db_order_app_password" {
   description = "Application database user password"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_billing_app_password" {
+  description = "Senha do usuário de aplicação do billing service"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_user_app_password" {
+  description = "Senha do usuário de aplicação do banco de identidade (login lambda)"
   type        = string
   sensitive   = true
 }
@@ -77,7 +99,7 @@ variable "grafana_admin_password" {
 }
 
 variable "ghcr_username" {
-  description = "GHCR username used for ECR Pull Through Cache."
+  description = "GHCR username used for ECR Pull Through Cache. Default matches the org that publishes Lambda images."
   type        = string
   default     = "ivanzao"
 }

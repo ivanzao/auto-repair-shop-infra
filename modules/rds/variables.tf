@@ -45,7 +45,7 @@ variable "private_subnet_ids" {
 }
 
 variable "eks_cluster_sg_id" {
-  description = "EKS cluster security group ID — allows runner pods to reach the DB"
+  description = "EKS cluster security group ID — allows pods in the cluster to reach the DB"
   type        = string
 }
 
@@ -70,4 +70,22 @@ variable "secret_recovery_window_days" {
   description = "Days before a deleted Secrets Manager secret is permanently removed"
   type        = number
   default     = 7
+}
+
+variable "secret_name_prefix" {
+  description = "Prefixo dos secrets no Secrets Manager. Default preserva os nomes da instância original."
+  type        = string
+  default     = "auto-repair-shop"
+}
+
+variable "app_db_name" {
+  description = "Nome do database da aplicação. Default: auto_repair_shop_{environment}."
+  type        = string
+  default     = null
+}
+
+variable "app_db_username" {
+  description = "Role da aplicação. Default: app_{environment}."
+  type        = string
+  default     = null
 }

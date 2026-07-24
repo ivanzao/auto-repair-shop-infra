@@ -28,30 +28,12 @@ variable "node_group_asg_names" {
   type        = list(string)
 }
 
-variable "app_node_port" {
-  description = "NodePort exposed by the app Kubernetes Service; NLB target group routes to this port on the EC2 instances"
-  type        = number
-  default     = 30080
-}
-
-variable "ecr_repository_prefix" {
-  description = "ECR Pull Through Cache prefix (e.g. ghcr-prod). Used to build Lambda image URIs that resolve to GHCR transparently."
+variable "lambda_placeholder_image" {
+  description = "Placeholder Lambda image used at create time; app CI overrides the real image via update-function-code (image_uri is ignored)."
   type        = string
-}
-
-variable "ghcr_owner" {
-  description = "GHCR owner/org segment of the image path (e.g. ivanzao)."
-  type        = string
-  default     = "ivanzao"
 }
 
 variable "db_secret_arn" {
   description = "ARN of the Secrets Manager entry holding DB connection details. Passed as DB_SECRET_ID env var to the login Lambda."
   type        = string
-}
-
-variable "aws_region" {
-  description = "AWS region (used to build ECR PTC URLs)."
-  type        = string
-  default     = "us-east-1"
 }

@@ -1,16 +1,9 @@
-# PrometheusRule definitions injected into kube-prometheus-stack.
-# Picked up by the Prometheus Operator and evaluated by Prometheus.
-# Alertmanager (also installed by the chart) routes firing alerts.
-
 additionalPrometheusRulesMap:
   auto-repair-shop-app:
     groups:
       - name: auto-repair-shop.app
         interval: 30s
         rules:
-          # 1. HighOrderCreationErrors — taxa de 5xx em qualquer endpoint da app
-          #    indica falha no processamento de ordens de serviço ou outras
-          #    rotas críticas.
           - alert: HighOrderCreationErrors
             expr: |
               sum(rate(ktor_http_server_requests_seconds_count{job=~".*auto-repair-shop.*",status=~"5.."}[5m]))
@@ -24,7 +17,6 @@ additionalPrometheusRulesMap:
               summary: "App está retornando >5% de 5xx (últimos 5m)"
               description: "Possível falha no processamento de ordens de serviço. Verificar logs e traces."
 
-          # 2. AppPodCrashLooping — restarts em pods do namespace da app
           - alert: AppPodCrashLooping
             expr: |
               increase(kube_pod_container_status_restarts_total{namespace=~"auto-repair-shop-.*"}[15m]) > 2
@@ -36,7 +28,6 @@ additionalPrometheusRulesMap:
               summary: "Pod {{ $labels.pod }} reiniciou mais de 2x em 15m"
               description: "Container {{ $labels.container }} no namespace {{ $labels.namespace }} está em CrashLoop."
 
-          # 3. HighLatency — p95 das respostas > 1s
           - alert: HighLatency
             expr: |
               histogram_quantile(0.95,
@@ -50,7 +41,6 @@ additionalPrometheusRulesMap:
               summary: "p95 latência > 1s (últimos 5m)"
               description: "Performance degradada nas APIs do auto-repair-shop. Avaliar CPU/memória dos pods e queries lentas no banco."
 
-          # 4. AppTargetDown — Prometheus não consegue scrapear /metrics
           - alert: AppTargetDown
             expr: up{job=~".*auto-repair-shop.*"} == 0
             for: 3m

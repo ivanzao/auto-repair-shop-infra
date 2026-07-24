@@ -1,3 +1,3 @@
 locals {
-  cluster_name = "auto-repair-shop-hml-cluster"
+  cluster_name = "auto-repair-shop-${var.environment}-cluster"
 }

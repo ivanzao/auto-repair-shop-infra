@@ -13,19 +13,7 @@ variable "lambda_sg_id" {
   type        = string
 }
 
-variable "ecr_repository_prefix" {
-  description = "ECR Pull Through Cache prefix (e.g. ghcr-prod). Used to build the email Lambda image URI."
+variable "lambda_placeholder_image" {
+  description = "Placeholder Lambda image used at create time; app CI overrides the real image via update-function-code (image_uri is ignored)."
   type        = string
-}
-
-variable "ghcr_owner" {
-  description = "GHCR owner segment in the image path (e.g. ivanzao)."
-  type        = string
-  default     = "ivanzao"
-}
-
-variable "aws_region" {
-  description = "AWS region used to build ECR PTC URLs."
-  type        = string
-  default     = "us-east-1"
 }

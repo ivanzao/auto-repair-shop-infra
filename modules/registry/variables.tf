@@ -3,6 +3,11 @@ variable "environment" {
   type        = string
 }
 
+variable "aws_region" {
+  description = "AWS region used to build the ECR registry hostname."
+  type        = string
+}
+
 variable "ghcr_username" {
   description = "GHCR username (GitHub user/org) used for image pulls via ECR Pull Through Cache."
   type        = string

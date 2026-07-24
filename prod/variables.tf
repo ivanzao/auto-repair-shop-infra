@@ -1,3 +1,13 @@
+variable "environment" {
+  description = "Environment name (hml, prod)"
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -19,13 +29,13 @@ variable "node_desired_size" {
 variable "node_min_size" {
   description = "Minimum number of EKS worker nodes"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "node_max_size" {
   description = "Maximum number of EKS worker nodes"
   type        = number
-  default     = 4
+  default     = 3
 }
 
 variable "db_instance_class" {
@@ -58,8 +68,14 @@ variable "db_master_password" {
   sensitive   = true
 }
 
-variable "db_app_password" {
+variable "db_order_app_password" {
   description = "Application database user password"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_billing_app_password" {
+  description = "Senha do usuário de aplicação do billing service"
   type        = string
   sensitive   = true
 }
