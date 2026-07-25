@@ -58,3 +58,22 @@ resource "kubernetes_config_map_v1" "dashboard_errors_integrations" {
 
   depends_on = [helm_release.kube_prometheus_stack]
 }
+
+resource "kubernetes_config_map_v1" "dashboard_execution_saga" {
+  metadata {
+    name      = "dashboard-execution-saga"
+    namespace = kubernetes_namespace.observability.metadata[0].name
+    labels = {
+      grafana_dashboard = "1"
+    }
+    annotations = {
+      grafana_folder = local.grafana_folder
+    }
+  }
+
+  data = {
+    "execution-saga.json" = file("${path.module}/dashboards/execution-saga.json")
+  }
+
+  depends_on = [helm_release.kube_prometheus_stack]
+}
