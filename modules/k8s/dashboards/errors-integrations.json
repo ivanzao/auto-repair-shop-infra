@@ -1,11 +1,17 @@
 {
   "uid": "auto-repair-errors",
   "title": "Auto Repair Shop — Errors & Integrations",
-  "tags": ["auto-repair-shop", "errors"],
+  "tags": [
+    "auto-repair-shop",
+    "errors"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "30s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
@@ -27,12 +33,21 @@
       "type": "stat",
       "title": "5xx (req/s)",
       "id": 1,
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m]))",
-          "refId": "A"
+          "expr": "sum by (job) (rate(ktor_http_server_requests_seconds_count{job=~\"order|billing|execution\",status=~\"5..\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{job}}"
         }
       ],
       "fieldConfig": {
@@ -41,9 +56,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.1 },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           }
         }
@@ -53,22 +77,43 @@
       "type": "stat",
       "title": "4xx (req/s)",
       "id": 2,
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"4..\"}[5m]))",
-          "refId": "A"
+          "expr": "sum by (job) (rate(ktor_http_server_requests_seconds_count{job=~\"order|billing|execution\",status=~\"4..\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{job}}"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "reqps" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
     },
     {
       "type": "stat",
       "title": "App pods restarting (1h)",
       "id": 3,
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"auto-repair-shop-.*\"}[1h]))",
@@ -81,8 +126,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           }
         }
@@ -92,55 +143,99 @@
       "type": "stat",
       "title": "Erro logs (5m)",
       "id": 4,
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "loki", "uid": "$loki" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
       "targets": [
         {
-          "expr": "sum(count_over_time({app=\"auto-repair-shop\"} |= `\"level\":\"ERROR\"` [5m]))",
+          "expr": "sum(count_over_time({app=~\"order|billing|execution\"} |= `\"level\":\"ERROR\"` [5m]))",
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Status codes 4xx/5xx ao longo do tempo",
       "id": 5,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum by (status) (rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"[45]..\"}[5m]))",
+          "expr": "sum by (job, status) (rate(ktor_http_server_requests_seconds_count{job=~\"order|billing|execution\",status=~\"[45]..\"}[5m]))",
           "refId": "A",
-          "legendFormat": "{{status}}"
+          "legendFormat": "{{job}} {{status}}"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "reqps" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Volume de logs por nível",
       "id": 6,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "datasource": { "type": "loki", "uid": "$loki" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
       "targets": [
         {
-          "expr": "sum by (level) (rate({app=\"auto-repair-shop\"} | json | __error__=\"\" [5m]))",
+          "expr": "sum by (app, level) (rate({app=~\"order|billing|execution\"} | json | __error__=\"\" [5m]))",
           "refId": "A",
-          "legendFormat": "{{level}}"
+          "legendFormat": "{{app}} {{level}}"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "table",
       "title": "Últimos erros (Loki)",
       "id": 7,
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 13 },
-      "datasource": { "type": "loki", "uid": "$loki" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
       "targets": [
         {
-          "expr": "{app=\"auto-repair-shop\"} |~ `\"level\":\"ERROR\"` | json | level=\"ERROR\" | label_format stack_short=`{{ printf \"%.500s\" .stack_trace }}`",
+          "expr": "{app=~\"order|billing|execution\"} |~ `\"level\":\"ERROR\"` | json | level=\"ERROR\" | label_format stack_short=`{{ printf \"%.500s\" .stack_trace }}`",
           "queryType": "range",
           "refId": "A"
         }
@@ -148,7 +243,9 @@
       "transformations": [
         {
           "id": "extractFields",
-          "options": { "source": "labels" }
+          "options": {
+            "source": "labels"
+          }
         },
         {
           "id": "organize",
@@ -192,16 +289,193 @@
       ],
       "options": {
         "showHeader": true,
-        "sortBy": [{ "displayName": "Data/Hora", "desc": true }]
+        "sortBy": [
+          {
+            "displayName": "Data/Hora",
+            "desc": true
+          }
+        ]
       },
       "fieldConfig": {
         "defaults": {
-          "custom": { "align": "left", "filterable": false }
+          "custom": {
+            "align": "left",
+            "filterable": false
+          }
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Data/Hora" }, "properties": [{ "id": "custom.width", "value": 180 }] },
-          { "matcher": { "id": "byName", "options": "Exception" }, "properties": [{ "id": "custom.width", "value": 500 }] }
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Data/Hora"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exception"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 500
+              }
+            ]
+          }
         ]
+      }
+    },
+    {
+      "type": "row",
+      "title": "MercadoPago",
+      "id": 8,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Latência p95 por operação",
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (operation, le) (rate(billing_provider_requests_seconds_bucket{dependency=\"mercadopago\"}[5m])))",
+          "refId": "A",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Taxa de chamada por operação",
+      "id": 10,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum by (operation) (rate(billing_provider_requests_seconds_count{dependency=\"mercadopago\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Taxa de erro do provider",
+      "id": 11,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(billing_provider_requests_seconds_count{dependency=\"mercadopago\",outcome=\"ERROR\"}[5m])) / sum(rate(billing_provider_requests_seconds_count{dependency=\"mercadopago\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Webhooks por desfecho",
+      "id": 12,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(billing_webhooks_total[5m]))",
+          "refId": "A",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pagamentos por estado",
+      "id": 13,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum by (state) (rate(billing_payments_total[5m]))",
+          "refId": "A",
+          "legendFormat": "{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
       }
     }
   ]

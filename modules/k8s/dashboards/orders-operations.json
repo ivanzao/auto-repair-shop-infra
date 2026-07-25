@@ -1,11 +1,17 @@
 {
   "uid": "auto-repair-orders-ops",
   "title": "Auto Repair Shop — Orders Operations",
-  "tags": ["auto-repair-shop", "business"],
+  "tags": [
+    "auto-repair-shop",
+    "business"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "30s",
-  "time": { "from": "now-24h", "to": "now" },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
@@ -13,7 +19,10 @@
         "label": "Data source",
         "type": "datasource",
         "query": "prometheus",
-        "current": { "text": "Prometheus", "value": "Prometheus" }
+        "current": {
+          "text": "Prometheus",
+          "value": "Prometheus"
+        }
       },
       {
         "name": "loki",
@@ -28,8 +37,16 @@
       "type": "stat",
       "title": "Ordens criadas (últimas 24h)",
       "id": 1,
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum(increase(orders_total[24h]))",
@@ -38,17 +55,26 @@
         }
       ],
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area"
       },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           },
           "unit": "short"
@@ -59,50 +85,94 @@
       "type": "stat",
       "title": "Em diagnóstico agora",
       "id": 2,
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum(orders_by_status_total{status=\"IN_DIAGNOSIS\"}) - sum(orders_by_status_total{status=~\"WAITING_APPROVAL|IN_PROGRESS|COMPLETED|DELIVERED|CANCELED\"})",
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Em execução agora",
       "id": 3,
-      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum(orders_by_status_total{status=\"IN_PROGRESS\"}) - sum(orders_by_status_total{status=~\"COMPLETED|DELIVERED\"})",
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Finalizadas (24h)",
       "id": 4,
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum(increase(orders_by_status_total{status=\"COMPLETED\"}[24h]))",
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Volume de criação de OS (rate por hora)",
       "id": 5,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum(rate(orders_total[5m])) * 3600",
@@ -113,7 +183,10 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "lineInterpolation": "smooth", "fillOpacity": 20 }
+          "custom": {
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20
+          }
         }
       }
     },
@@ -121,8 +194,16 @@
       "type": "timeseries",
       "title": "Transições por status (rate)",
       "id": 6,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum by (status) (rate(orders_by_status_total[5m]))",
@@ -133,7 +214,9 @@
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": { "lineInterpolation": "smooth" }
+          "custom": {
+            "lineInterpolation": "smooth"
+          }
         }
       }
     },
@@ -141,8 +224,16 @@
       "type": "bargauge",
       "title": "Distribuição cumulativa por status (todas as transições)",
       "id": 7,
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
           "expr": "sum by (status) (orders_by_status_total)",
@@ -155,18 +246,30 @@
         "displayMode": "gradient",
         "showUnfilled": true
       },
-      "fieldConfig": { "defaults": { "unit": "short" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "type": "bargauge",
       "title": "Tempo médio em cada status (segundos)",
       "description": "Calculado a partir do log estruturado event=order.status_changed via LogQL unwrap em duration_in_previous_seconds.",
       "id": 8,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
-      "datasource": { "type": "loki", "uid": "$loki" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
       "targets": [
         {
-          "expr": "avg by (from_status) (avg_over_time({app=\"auto-repair-shop\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [$__range]))",
+          "expr": "avg by (from_status) (avg_over_time({app=\"order\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [$__range]))",
           "refId": "A",
           "legendFormat": "{{from_status}}"
         }
@@ -176,17 +279,29 @@
         "displayMode": "gradient",
         "showUnfilled": true
       },
-      "fieldConfig": { "defaults": { "unit": "s" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "p95 do tempo em cada status (segundos)",
       "id": 9,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
-      "datasource": { "type": "loki", "uid": "$loki" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
       "targets": [
         {
-          "expr": "quantile_over_time(0.95, {app=\"auto-repair-shop\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [5m]) by (from_status)",
+          "expr": "quantile_over_time(0.95, {app=\"order\"} | json | event=\"order.status_changed\" | unwrap duration_in_previous_seconds [5m]) by (from_status)",
           "refId": "A",
           "legendFormat": "{{from_status}}"
         }
@@ -194,7 +309,9 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": { "lineInterpolation": "smooth" }
+          "custom": {
+            "lineInterpolation": "smooth"
+          }
         }
       }
     }
