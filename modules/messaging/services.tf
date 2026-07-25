@@ -47,7 +47,7 @@ resource "aws_sns_topic_subscription" "billing_to_email" {
 
   filter_policy_scope = "MessageAttributes"
   filter_policy = jsonencode({
-    eventType = ["QuoteEmailRequested"]
+    eventType = ["QuoteEmailRequested", "QuoteApproved"]
   })
 }
 
