@@ -1,19 +1,52 @@
 {
   "uid": "auto-repair-apm",
-  "title": "Auto Repair Shop — APM (HTTP)",
-  "tags": ["auto-repair-shop", "apm"],
+  "title": "Auto Repair Shop — APM por serviço",
+  "tags": [
+    "auto-repair-shop",
+    "apm"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "30s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
         "name": "datasource",
-        "label": "Data source",
+        "label": "Prometheus",
         "type": "datasource",
         "query": "prometheus",
-        "current": { "text": "Prometheus", "value": "Prometheus" }
+        "current": {
+          "text": "Prometheus",
+          "value": "Prometheus"
+        }
+      },
+      {
+        "name": "loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki"
+      },
+      {
+        "name": "service",
+        "label": "Serviço",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$datasource"
+        },
+        "query": "label_values(ktor_http_server_requests_seconds_count, job)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "text": "order",
+          "value": "order"
+        }
       }
     ]
   },
@@ -22,39 +55,51 @@
       "type": "stat",
       "title": "Request rate (req/s)",
       "id": 1,
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "reqps" } }
-    },
-    {
-      "type": "stat",
-      "title": "Error rate (5xx)",
-      "id": 2,
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
-      "targets": [
-        {
-          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\",status=~\"5..\"}[5m])) / sum(rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=\"$service\"}[5m]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "red", "value": 0.05 }
-            ]
-          }
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Error rate (5xx)",
+      "id": 2,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ktor_http_server_requests_seconds_count{job=\"$service\",status=~\"5..\"}[5m])) / sum(rate(ktor_http_server_requests_seconds_count{job=\"$service\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
         }
       }
     },
@@ -62,25 +107,25 @@
       "type": "stat",
       "title": "p95 latency",
       "id": 3,
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=\"$service\"}[5m])))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.5 },
-              { "color": "red", "value": 1 }
-            ]
-          }
+          "unit": "s"
         }
       }
     },
@@ -88,151 +133,518 @@
       "type": "stat",
       "title": "p99 latency",
       "id": 4,
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=\"$service\"}[5m])))",
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Latência (p50 / p95 / p99)",
       "id": 5,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=\"$service\"}[5m])))",
           "refId": "A",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=\"$service\"}[5m])))",
           "refId": "B",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(ktor_http_server_requests_seconds_bucket{job=\"$service\"}[5m])))",
           "refId": "C",
           "legendFormat": "p99"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Request rate por endpoint",
       "id": 6,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum by (route) (rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum by (route) (rate(ktor_http_server_requests_seconds_count{job=\"$service\"}[5m]))",
           "refId": "A",
-          "legendFormat": "{{uri}}"
+          "legendFormat": "{{route}}"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "reqps" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Status codes ao longo do tempo",
       "id": 7,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum by (status) (rate(ktor_http_server_requests_seconds_count{job=~\".*auto-repair-shop.*\"}[5m]))",
+          "expr": "sum by (status) (rate(ktor_http_server_requests_seconds_count{job=\"$service\"}[5m]))",
           "refId": "A",
           "legendFormat": "{{status}}"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "reqps" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
     },
     {
       "type": "table",
       "title": "Top 10 endpoints mais lentos (p95 5m)",
       "id": 8,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "topk(10, histogram_quantile(0.95, sum by (route, le) (rate(ktor_http_server_requests_seconds_bucket{job=~\".*auto-repair-shop.*\"}[5m]))))",
-          "refId": "A",
-          "format": "table",
-          "instant": true
+          "expr": "topk(10, histogram_quantile(0.95, sum by (route, le) (rate(ktor_http_server_requests_seconds_bucket{job=\"$service\"}[5m]))))",
+          "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "options": {
+        "showHeader": true
+      }
     },
     {
       "type": "row",
-      "title": "Pod Health",
+      "title": "JVM",
       "id": 9,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
-      "collapsed": false
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "collapsed": false,
+      "panels": []
     },
     {
       "type": "timeseries",
-      "title": "CPU usage por pod",
+      "title": "Heap usado por pool",
       "id": 10,
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=~\"auto-repair-shop.*\", container!=\"\", container!=\"POD\"}[5m]))",
+          "expr": "sum by (id) (jvm_memory_used_bytes{job=\"$service\", area=\"heap\"})",
           "refId": "A",
-          "legendFormat": "{{pod}}"
+          "legendFormat": "{{id}}"
+        },
+        {
+          "expr": "sum(jvm_memory_max_bytes{job=\"$service\", area=\"heap\"})",
+          "refId": "B",
+          "legendFormat": "max"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 1 } } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
     },
     {
       "type": "timeseries",
-      "title": "Memória (working set) por pod",
+      "title": "GC pause",
       "id": 11,
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=~\"auto-repair-shop.*\", container!=\"\", container!=\"POD\"})",
+          "expr": "sum by (action) (rate(jvm_gc_pause_seconds_sum{job=\"$service\"}[5m]))",
           "refId": "A",
-          "legendFormat": "{{pod}}"
+          "legendFormat": "{{action}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(jvm_gc_pause_seconds_bucket{job=\"$service\"}[5m])))",
+          "refId": "B",
+          "legendFormat": "p95"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 1 } } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
     },
     {
       "type": "timeseries",
-      "title": "Restarts por pod",
+      "title": "Threads",
       "id": 12,
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
-      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
       "targets": [
         {
-          "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"auto-repair-shop.*\"}[1h]))",
+          "expr": "jvm_threads_live_threads{job=\"$service\"}",
+          "refId": "A",
+          "legendFormat": "live"
+        },
+        {
+          "expr": "jvm_threads_peak_threads{job=\"$service\"}",
+          "refId": "B",
+          "legendFormat": "peak"
+        },
+        {
+          "expr": "jvm_threads_daemon_threads{job=\"$service\"}",
+          "refId": "C",
+          "legendFormat": "daemon"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU do processo vs do container",
+      "id": 13,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "process_cpu_usage{job=\"$service\"}",
+          "refId": "A",
+          "legendFormat": "processo"
+        },
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"auto-repair-shop-.*\", pod=~\"$service-.*\", container!=\"\", container!=\"POD\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "container"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memória alocada por GC (taxa)",
+      "id": 14,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(jvm_gc_memory_allocated_bytes_total{job=\"$service\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "alocação"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Recursos",
+      "id": 15,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU por pod",
+      "id": 16,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=~\"auto-repair-shop-.*\", pod=~\"$service-.*\", container!=\"\", container!=\"POD\"}[5m]))",
           "refId": "A",
           "legendFormat": "{{pod}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "custom": { "lineWidth": 1 },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
-            ]
-          }
+          "unit": "short"
         }
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memória (working set) por pod",
+      "id": 17,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=~\"auto-repair-shop-.*\", pod=~\"$service-.*\", container!=\"\", container!=\"POD\"})",
+          "refId": "A",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Restarts por pod (1h)",
+      "id": 18,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 39
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"auto-repair-shop-.*\", pod=~\"$service-.*\"}[1h]))",
+          "refId": "A",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Réplicas ready vs desired",
+      "id": 19,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "kube_deployment_status_replicas_ready{namespace=~\"auto-repair-shop-.*\", deployment=\"$service\"}",
+          "refId": "A",
+          "legendFormat": "ready"
+        },
+        {
+          "expr": "kube_deployment_spec_replicas{namespace=~\"auto-repair-shop-.*\", deployment=\"$service\"}",
+          "refId": "B",
+          "legendFormat": "desired"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Logs",
+      "id": 20,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Volume de logs por nível",
+      "id": 21,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
+      "targets": [
+        {
+          "expr": "sum by (level) (rate({app=\"$service\"} | json | __error__=\"\" [5m]))",
+          "refId": "A",
+          "legendFormat": "{{level}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Últimos erros",
+      "id": 22,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "$loki"
+      },
+      "targets": [
+        {
+          "expr": "{app=\"$service\"} |~ `\"level\":\"ERROR\"` | json",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true
+      },
+      "links": [
+        {
+          "title": "Ver traces de $service no Tempo",
+          "url": "/explore?left=%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22queryType%22:%22traceqlSearch%22,%22filters%22:%5B%7B%22id%22:%22service%22,%22tag%22:%22service.name%22,%22operator%22:%22%3D%22,%22value%22:%5B%22$service%22%5D,%22scope%22:%22resource%22%7D%5D%7D%5D%7D&from=${__from}&to=${__to}",
+          "targetBlank": true
+        }
+      ]
     }
   ]
 }
