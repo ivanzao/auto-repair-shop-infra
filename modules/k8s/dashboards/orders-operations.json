@@ -39,7 +39,7 @@
       "id": 1,
       "gridPos": {
         "h": 6,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 0
       },
@@ -83,12 +83,13 @@
     },
     {
       "type": "stat",
-      "title": "Em diagnóstico agora",
+      "title": "Aguardando diagnóstico agora",
+      "description": "O diagnóstico mora no execution, não no order: a métrica é execution_by_status_total. Estimado por diferença de contadores de transição (entrou em AWAITING_DIAGNOSIS menos entrou em RESERVED), então superestima pelas execuções canceladas por falta de insumo. Depende da instrumentacao da MetricsPort no execution.",
       "id": 2,
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 6,
+        "w": 4,
+        "x": 4,
         "y": 0
       },
       "datasource": {
@@ -97,7 +98,61 @@
       },
       "targets": [
         {
-          "expr": "sum(orders_by_status_total{status=\"IN_DIAGNOSIS\"}) - sum(orders_by_status_total{status=~\"WAITING_APPROVAL|IN_PROGRESS|COMPLETED|DELIVERED|CANCELED\"})",
+          "expr": "sum(execution_by_status_total{status=\"AWAITING_DIAGNOSIS\"}) - sum(execution_by_status_total{status=\"RESERVED\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Aguardando aprovação agora",
+      "description": "Entrou em WAITING_APPROVAL menos entrou em EXECUTION_ENQUEUED. Superestima pelas OS canceladas a partir de WAITING_APPROVAL (recusa, falha de pagamento, reserva expirada).",
+      "id": 10,
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum(orders_by_status_total{status=\"WAITING_APPROVAL\"}) - sum(orders_by_status_total{status=\"EXECUTION_ENQUEUED\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Na fila de execução agora",
+      "description": "OS pagas esperando o mecânico chamar POST /v1/orders/{id}/start. Entrou em EXECUTION_ENQUEUED menos entrou em IN_PROGRESS.",
+      "id": 11,
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "targets": [
+        {
+          "expr": "sum(orders_by_status_total{status=\"EXECUTION_ENQUEUED\"}) - sum(orders_by_status_total{status=\"IN_PROGRESS\"})",
           "refId": "A"
         }
       ],
@@ -110,11 +165,12 @@
     {
       "type": "stat",
       "title": "Em execução agora",
+      "description": "Entrou em IN_PROGRESS menos entrou em COMPLETED. Superestima pelas OS canceladas durante a execução (ExecutionFailed).",
       "id": 3,
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 12,
+        "w": 4,
+        "x": 16,
         "y": 0
       },
       "datasource": {
@@ -123,7 +179,7 @@
       },
       "targets": [
         {
-          "expr": "sum(orders_by_status_total{status=\"IN_PROGRESS\"}) - sum(orders_by_status_total{status=~\"COMPLETED|DELIVERED\"})",
+          "expr": "sum(orders_by_status_total{status=\"IN_PROGRESS\"}) - sum(orders_by_status_total{status=\"COMPLETED\"})",
           "refId": "A"
         }
       ],
@@ -139,8 +195,8 @@
       "id": 4,
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 18,
+        "w": 4,
+        "x": 20,
         "y": 0
       },
       "datasource": {

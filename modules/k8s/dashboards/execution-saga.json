@@ -196,6 +196,7 @@
     {
       "type": "timeseries",
       "title": "Transições de execução por status",
+      "description": "Status esperados: AWAITING_DIAGNOSIS, RESERVED, ENQUEUED, IN_PROGRESS, COMPLETED, FAILED, CANCELED. DIAGNOSED e QUEUED foram removidos. Valor vindo de status.name do ExecutionStatus.",
       "id": 7,
       "gridPos": {
         "h": 8,
@@ -223,6 +224,7 @@
     {
       "type": "bargauge",
       "title": "Distribuição cumulativa por status",
+      "description": "Status esperados: AWAITING_DIAGNOSIS, RESERVED, ENQUEUED, IN_PROGRESS, COMPLETED, FAILED, CANCELED. DIAGNOSED e QUEUED foram removidos. Valor vindo de status.name do ExecutionStatus.",
       "id": 8,
       "gridPos": {
         "h": 8,
