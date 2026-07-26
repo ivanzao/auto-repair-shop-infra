@@ -2,32 +2,52 @@
 # rds-tunnel.sh — abre um tunnel local → RDS via pod socat no EKS
 #
 # Uso:
-#   ./scripts/rds-tunnel.sh [prod|hml]
+#   ./scripts/rds-tunnel.sh <order|billing|auth> [prod|hml]
 #
 # Resultado:
-#   Banco acessível em localhost:5432 com qualquer client (psql, DBeaver, etc.)
+#   Banco acessível em localhost com qualquer client (IntelliJ, DBeaver, psql).
+#   Cada serviço tem porta local própria, então dá para abrir os três ao mesmo tempo.
 #   O pod de tunnel é removido automaticamente ao sair (Ctrl+C).
+#
+# execution não aparece aqui: usa DynamoDB, não RDS.
 #
 # Pré-requisitos: aws cli, kubectl, jq
 # Credenciais AWS resolvidas pela cadeia padrão do CLI (aws configure / ~/.aws/credentials / env vars)
 
 set -euo pipefail
 
-ENV="${1:-prod}"
+SERVICE="${1:-}"
+ENV="${2:-prod}"
 
-if [[ "$ENV" != "prod" && "$ENV" != "hml" ]]; then
-  echo "uso: $0 [prod|hml]" >&2
+if [[ "$SERVICE" == "execution" ]]; then
+  echo "execution usa DynamoDB, não RDS. Consulte com:" >&2
+  echo "  aws dynamodb scan --table-name auto-repair-shop-execution-$ENV --max-items 20" >&2
   exit 1
 fi
 
-NAMESPACE="auto-repair-shop-$ENV"
-POD_NAME="rds-tunnel-$$"
-LOCAL_PORT=5432
+if [[ "$SERVICE" != "order" && "$SERVICE" != "billing" && "$SERVICE" != "auth" ]]; then
+  echo "uso: $0 <order|billing|auth> [prod|hml]" >&2
+  exit 1
+fi
 
-echo "→ buscando credenciais do RDS ($ENV)..."
+if [[ "$ENV" != "prod" && "$ENV" != "hml" ]]; then
+  echo "uso: $0 <order|billing|auth> [prod|hml]" >&2
+  exit 1
+fi
+
+case "$SERVICE" in
+  order)   LOCAL_PORT=15432 ;;
+  billing) LOCAL_PORT=15433 ;;
+  auth)    LOCAL_PORT=15434 ;;
+esac
+
+NAMESPACE="auto-repair-shop-$ENV"
+POD_NAME="rds-tunnel-$SERVICE-$$"
+
+echo "→ buscando credenciais do RDS ($SERVICE/$ENV)..."
 
 SECRET_ARN=$(aws ssm get-parameter \
-  --name "/auto-repair-shop/$ENV/db/secret-arn" \
+  --name "/auto-repair-shop/$ENV/$SERVICE/db/secret-arn" \
   --query Parameter.Value --output text)
 
 SECRET_JSON=$(aws secretsmanager get-secret-value \
@@ -59,32 +79,38 @@ kubectl run "$POD_NAME" \
   --image=alpine/socat \
   --restart=Never \
   --namespace="$NAMESPACE" \
-  -- socat TCP-LISTEN:5432,fork TCP:"$RDS_HOST":"$RDS_PORT" >/dev/null 2>&1
+  -- socat TCP-LISTEN:"$RDS_PORT",fork TCP:"$RDS_HOST":"$RDS_PORT" >/dev/null 2>&1
 
 echo "→ aguardando pod ficar Ready..."
 kubectl wait pod "$POD_NAME" \
   --for=condition=Ready \
   --namespace="$NAMESPACE" \
-  --timeout=30s >/dev/null
+  --timeout=60s >/dev/null
 
-echo ""
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║  Tunnel ativo — conecte com qualquer client:        ║"
-echo "║                                                      ║"
-echo "║  host:     localhost                                 ║"
-printf  "║  port:     %-41s║\n" "$LOCAL_PORT"
-printf  "║  database: %-41s║\n" "$DB_NAME"
-printf  "║  user:     %-41s║\n" "$DB_USER"
-printf  "║  password: %-41s║\n" "$DB_PASS"
-echo "║                                                      ║"
-echo "║  psql rápido:                                        ║"
-printf  "║  PGPASSWORD='%s'\n" "$DB_PASS"
-printf  "║    psql -h localhost -U %s -d %s\n" "$DB_USER" "$DB_NAME"
-echo "║                                                      ║"
-echo "║  Ctrl+C para encerrar e remover o pod               ║"
-echo "╚══════════════════════════════════════════════════════╝"
-echo ""
+cat <<EOF
+
+╔═══════════════════════════════════════════════════════════════════
+║  Tunnel ativo — $SERVICE ($ENV)
+╠═══════════════════════════════════════════════════════════════════
+║  IntelliJ / DBeaver — Data Source PostgreSQL:
+║
+║    jdbc:postgresql://localhost:$LOCAL_PORT/$DB_NAME
+║
+║    host:     localhost
+║    port:     $LOCAL_PORT
+║    database: $DB_NAME
+║    user:     $DB_USER
+║    password: $DB_PASS
+║
+║  psql rápido:
+║    PGPASSWORD='$DB_PASS' psql -h localhost -p $LOCAL_PORT -U $DB_USER -d $DB_NAME
+║
+║  Portas por serviço: order 15432 · billing 15433 · auth 15434
+║  Ctrl+C encerra e remove o pod
+╚═══════════════════════════════════════════════════════════════════
+
+EOF
 
 kubectl port-forward "pod/$POD_NAME" \
-  "$LOCAL_PORT":5432 \
+  "$LOCAL_PORT":"$RDS_PORT" \
   --namespace="$NAMESPACE"

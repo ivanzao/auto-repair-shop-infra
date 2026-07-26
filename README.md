@@ -87,14 +87,21 @@ Stack LGTM completo no namespace `observability`:
 O Grafana e o RDS ficam dentro da VPC. Os scripts abaixo abrem tunnels para acesso local:
 
 ```bash
-# Grafana → http://localhost:3000  (admin / admin)
-./scripts/grafana-tunnel.sh prod
+# Grafana → http://localhost:3000
+# imprime a senha real do admin e os links dos dashboards
+./scripts/grafana-tunnel.sh hml
 
-# RDS → localhost:5432  (credenciais impressas na tela)
-./scripts/rds-tunnel.sh prod
+# RDS → um tunnel por serviço, cada um em porta própria
+./scripts/rds-tunnel.sh billing hml     # localhost:15433
+./scripts/rds-tunnel.sh order   hml     # localhost:15432
+./scripts/rds-tunnel.sh auth    hml     # localhost:15434
 ```
 
-Substitua `prod` por `hml` para o ambiente de homologação.
+O `execution` não aparece: usa DynamoDB, que é API da AWS e se consulta direto, sem tunnel.
+
+```bash
+aws dynamodb scan --table-name auto-repair-shop-execution-hml --max-items 20
+```
 
 **Pré-requisitos:** `aws cli`, `kubectl`, `jq` (só no tunnel de RDS).
 
