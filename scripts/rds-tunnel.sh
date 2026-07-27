@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rds-tunnel.sh — abre um tunnel local → RDS via pod socat no EKS
+# rds-tunnel.sh: abre um tunnel local → RDS via pod socat no EKS
 #
 # Uso:
 #   ./scripts/rds-tunnel.sh <order|billing|auth> [prod|hml]
@@ -90,9 +90,9 @@ kubectl wait pod "$POD_NAME" \
 cat <<EOF
 
 ╔═══════════════════════════════════════════════════════════════════
-║  Tunnel ativo — $SERVICE ($ENV)
+║  Tunnel ativo: $SERVICE ($ENV)
 ╠═══════════════════════════════════════════════════════════════════
-║  IntelliJ / DBeaver — Data Source PostgreSQL:
+║  IntelliJ / DBeaver, Data Source PostgreSQL:
 ║
 ║    jdbc:postgresql://localhost:$LOCAL_PORT/$DB_NAME
 ║

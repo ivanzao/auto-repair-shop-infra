@@ -45,7 +45,7 @@ variable "private_subnet_ids" {
 }
 
 variable "eks_cluster_sg_id" {
-  description = "EKS cluster security group ID — allows pods in the cluster to reach the DB"
+  description = "EKS cluster security group ID, allows pods in the cluster to reach the DB"
   type        = string
 }
 
@@ -55,7 +55,7 @@ variable "lambda_sg_id" {
 }
 
 variable "skip_final_snapshot" {
-  description = "Skip final snapshot on destroy — set false for prod"
+  description = "Skip final snapshot on destroy, set false for prod"
   type        = bool
   default     = false
 }

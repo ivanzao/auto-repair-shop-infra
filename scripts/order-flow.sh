@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# order-flow.sh — executa o fluxo completo de 1 order:
+# order-flow.sh: executa o fluxo completo de 1 order:
 #   login → create supply/service/customer/vehicle → create order
 #   → start-diagnosis → finish-diagnosis → quote approve → complete → deliver
 #

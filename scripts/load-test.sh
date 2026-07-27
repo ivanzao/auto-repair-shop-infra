@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# load-test.sh — gera tráfego de negócio (orders/customers/supplies/services)
+# load-test.sh: gera tráfego de negócio (orders/customers/supplies/services)
 # contra a API pra popular dashboards Grafana (APM, Errors, Orders Operations).
 #
 # Uso:
@@ -96,7 +96,7 @@ for i in $(seq 1 "$ORDERS_COUNT"); do
   SVC=$([ $((i % 2)) -eq 0 ] && echo "$SVC1" || echo "$SVC2")
 
   ORDER_ID=$(auth_post "$APIGW/v1/orders" \
-    "{\"customerId\":\"$CUS\",\"vehicleId\":\"$VEH\",\"description\":\"OS #$i — diagnóstico\",\"technician\":\"Téc $((i % 3 + 1))\",\"servicesIds\":[\"$SVC\"]}" \
+    "{\"customerId\":\"$CUS\",\"vehicleId\":\"$VEH\",\"description\":\"OS #$i diagnóstico\",\"technician\":\"Téc $((i % 3 + 1))\",\"servicesIds\":[\"$SVC\"]}" \
     | jq -r .id || true)
 
   if [ -z "$ORDER_ID" ] || [ "$ORDER_ID" = "null" ]; then

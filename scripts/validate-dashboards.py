@@ -4,7 +4,7 @@
 Regras:
   1. JSON parseável, com uid e title.
   2. Nenhum matcher morto: os labels job/app nunca podem casar o nome antigo
-     "auto-repair-shop" — os recursos k8s hoje se chamam order/billing/execution.
+     "auto-repair-shop"; os recursos k8s hoje se chamam order/billing/execution.
   3. Dashboard que declara a variável `service` deve usá-la em toda query.
   4. Valor de label de status/state/result/outcome/operation é UPPER_SNAKE, o que
      os ports de métrica garantem por serem enum.
