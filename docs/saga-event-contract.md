@@ -40,7 +40,7 @@ Todo evento publicado tem este envelope no body (JSON):
 
 | Attribute | Valor | Uso |
 |---|---|---|
-| `eventType` | igual ao envelope (ex. `OrderCreated`) | **camelCase** — casa com o `filter_policy` da infra |
+| `eventType` | igual ao envelope (ex. `OrderCreated`) | **camelCase**, casando com o `filter_policy` da infra |
 | `traceparent` | header W3C trace context | propagação de trace por SNS/SQS → Tempo (tracing distribuído) |
 
 ## Identidade nos eventos
@@ -52,18 +52,18 @@ Não há validação contra banco: os serviços confiam no JWT, que já carrega 
 | `Order` | `openedBy` | JWT de quem chamou `POST /v1/orders` |
 | `Execution` | `diagnosedBy` | JWT de quem chamou `finish-diagnosis` |
 
-Só o `diagnosedBy` atravessa a fronteira, dentro do `DiagnoseFinished`. Consequência para a infra: **nenhuma**. A aplicação Kotlin parseia o próprio `Authorization: Bearer`, que o API Gateway repassa intacto — não depende dos headers `X-User-Id`/`X-User-Role` injetados pelo authorizer. Consequência para as migrations: não existe mais acoplamento de UUID entre repositórios; a `V3` do lambdas semeia usuários e ninguém precisa parear nada.
+Só o `diagnosedBy` atravessa a fronteira, dentro do `DiagnoseFinished`. Consequência para a infra: **nenhuma**. A aplicação Kotlin parseia o próprio `Authorization: Bearer`, que o API Gateway repassa intacto, e não depende dos headers `X-User-Id`/`X-User-Role` injetados pelo authorizer. Consequência para as migrations: não existe mais acoplamento de UUID entre repositórios; a `V3` do lambdas semeia usuários e ninguém precisa parear nada.
 
 ## Convenções
 
 - JSON, chaves **camelCase**.
 - Dinheiro: `BigDecimal` serializado como número decimal (ex. `149.90`).
 - Timestamps: ISO-8601 em UTC.
-- Placa: formato antigo, `^[A-Z]{3}\d{4}$` (ex. `ABC1234`). O `VehiclePlate` do order **rejeita placa Mercosul** — aceitar o formato novo seria decisão de produto.
+- Placa: formato antigo, `^[A-Z]{3}\d{4}$` (ex. `ABC1234`). O `VehiclePlate` do order **rejeita placa Mercosul**; aceitar o formato novo seria decisão de produto.
 - **Idempotência:** dedup por `eventId` na tabela/registro `processed_events (event_id, consumer_id)` PK, por serviço. billing e execution replicam o padrão do order (execution em DynamoDB).
 - **Correlação:** `orderId` é a chave da saga em **todo** evento. `reservationId` nasce no `DiagnoseFinished` (execution), é repassado pelo order dentro do `OrderAwaitingApproval`, o billing persiste, e o devolve nas compensações que pedem liberação de reserva.
 - **Vocabulário:** `mechanic`, nunca `technician`. `supplies`, nunca `parts`.
-- **Versionamento:** todos começam em `eventVersion: 1`. Mudança compatível (campo aditivo opcional) não incrementa; mudança incompatível incrementa e o consumidor passa a tratar as duas versões durante a transição. `OrderCreated` e `SuppliesUnavailable` mudaram de formato ou de nome na entrega do diagnóstico e **permanecem em `eventVersion: 1`**: não existe consumidor com o formato antigo fora da janela de deploy, que é coordenada na ordem execution → order → billing. Durante a janela a saga trava na etapa correspondente sem perder mensagem — elas ficam na fila e são reprocessadas.
+- **Versionamento:** todos começam em `eventVersion: 1`. Mudança compatível (campo aditivo opcional) não incrementa; mudança incompatível incrementa e o consumidor passa a tratar as duas versões durante a transição. `OrderCreated` e `SuppliesUnavailable` mudaram de formato ou de nome na entrega do diagnóstico e **permanecem em `eventVersion: 1`**: não existe consumidor com o formato antigo fora da janela de deploy, que é coordenada na ordem execution → order → billing. Durante a janela a saga trava na etapa correspondente sem perder mensagem: elas ficam na fila e são reprocessadas.
 
 ## Catálogo de eventos
 
@@ -85,7 +85,7 @@ Só o `diagnosedBy` atravessa a fronteira, dentro do `DiagnoseFinished`. Consequ
 
 Fluxo feliz: `OrderCreated` → (o mecânico pega a OS da fila e chama `POST /v1/orders/{orderId}/finish-diagnosis` no execution) → `DiagnoseFinished` → `OrderAwaitingApproval` → `QuoteEmailRequested` → (cliente aprova via link → `QuoteApproved`, que leva o link de checkout ao e-mail) → `PaymentConfirmed` → (o mecânico chama `POST /v1/orders/{orderId}/start`) → `ExecutionStarted` → `ExecutionFinished`.
 
-O diagnóstico resolve preços e reserva estoque **na mesma operação**, e é o `DiagnoseFinished` que anuncia as duas coisas. A reserva acontece **antes** do orçamento para eliminar a corrida entre estoque e pagamento — o cliente nunca paga por serviço inexequível.
+O diagnóstico resolve preços e reserva estoque **na mesma operação**, e é o `DiagnoseFinished` que anuncia as duas coisas. A reserva acontece **antes** do orçamento para eliminar a corrida entre estoque e pagamento, para que o cliente nunca pague por serviço inexequível.
 
 `OrderAwaitingApproval` declara um fato, não dá uma ordem: o order não sabe que existe alguém encarregado de gerar orçamento. `QuoteRequested` seria comando disfarçado.
 
@@ -94,7 +94,7 @@ O diagnóstico resolve preços e reserva estoque **na mesma operação**, e é o
 `OrderCreated`, `DiagnoseFinished` e `OrderAwaitingApproval` carregam o estado necessário para que **nenhuma chamada REST** aconteça no fluxo da saga. O billing só escuta `OrderAwaitingApproval` (nunca `OrderCreated`, nunca `DiagnoseFinished`); por isso o order **repassa o orçamento priced** adiante.
 
 ```jsonc
-// OrderCreated  (order → execution) — enfileira a OS para diagnóstico
+// OrderCreated  (order → execution): enfileira a OS para diagnóstico
 {
   "orderId": "uuid",
   "customer": { "id": "uuid", "name": "string", "email": "string" },
@@ -103,7 +103,7 @@ O diagnóstico resolve preços e reserva estoque **na mesma operação**, e é o
 ```
 
 ```jsonc
-// DiagnoseFinished  (execution → order) — preços resolvidos + estoque reservado
+// DiagnoseFinished  (execution → order): preços resolvidos + estoque reservado
 {
   "orderId": "uuid",
   "reservationId": "uuid",
@@ -118,7 +118,7 @@ O diagnóstico resolve preços e reserva estoque **na mesma operação**, e é o
 `totalAmount` = soma de `price` dos serviços + soma de `quantity × unitPrice` dos insumos. Os preços são resolvidos pelo catálogo e pelo estoque do execution; o order não conhece catálogo nem preço e grava o que chega como snapshot.
 
 ```jsonc
-// OrderAwaitingApproval  (order → billing) — gatilho da quote
+// OrderAwaitingApproval  (order → billing): gatilho da quote
 {
   "orderId": "uuid",
   "reservationId": "uuid",
@@ -162,27 +162,27 @@ Todos carregam `orderId`; os campos abaixo são adicionais.
 // PaymentConfirmed  (billing → order, execution)
 { "orderId": "uuid", "paymentId": "string", "amount": 209.90 }
 
-// ExecutionStarted  (execution → order) — emitido por POST /v1/orders/{id}/start
+// ExecutionStarted  (execution → order): emitido por POST /v1/orders/{id}/start
 { "orderId": "uuid" }
 
-// ExecutionFinished  (execution → order) — emitido por POST /v1/orders/{id}/finish
+// ExecutionFinished  (execution → order): emitido por POST /v1/orders/{id}/finish
 { "orderId": "uuid" }
 
-// SuppliesUnavailable  (execution → order) — order cancela a OS
+// SuppliesUnavailable  (execution → order): order cancela a OS
 { "orderId": "uuid",
   "missingSupplies": [
     { "supplyId": "uuid", "name": "string", "requested": 4, "available": 1 } ] }
 
-// QuoteRejected  (billing → execution, order) — execution libera reserva; order cancela
+// QuoteRejected  (billing → execution, order): execution libera reserva; order cancela
 { "orderId": "uuid", "reservationId": "uuid" }
 
-// PaymentFailed  (billing → execution, order) — execution libera reserva; order cancela
+// PaymentFailed  (billing → execution, order): execution libera reserva; order cancela
 { "orderId": "uuid", "reservationId": "uuid", "reason": "string" }
 
-// ExecutionFailed  (execution → billing, order) — billing estorna via MP; order cancela
+// ExecutionFailed  (execution → billing, order): billing estorna via MP; order cancela
 { "orderId": "uuid", "paymentId": "string", "reason": "string" }
 
-// ReservationExpired  (execution job interno → order) — execution libera; order cancela
+// ReservationExpired  (execution job interno → order): execution libera; order cancela
 { "orderId": "uuid", "reservationId": "uuid" }
 ```
 
@@ -194,8 +194,8 @@ Todos carregam `orderId`; os campos abaixo são adicionais.
 |---|---|
 | `SuppliesReserved` | **removido.** A reserva passou a acontecer dentro do `finish-diagnosis`, e o fato é anunciado pelo `DiagnoseFinished`. Um evento a menos no caminho feliz. |
 | `DiagnoseFinished` (significado antigo) | **removido.** Era a transição pós-pagamento `IN_PROGRESS → DIAGNOSED`, que nunca correspondeu a um diagnóstico de verdade. Some junto com o estado `DIAGNOSED`; **o nome foi reusado** para o evento de fim de diagnóstico. |
-| `PartsUnavailable` | **renomeado** para `SuppliesUnavailable`, alinhando com o vocabulário `supplies`. O payload não mudou — é `missingSupplies` com `supplyId`, `name`, `requested` e `available`, exatamente como o código sempre emitiu. |
-| `PartsReserved` | nunca existiu no código: era como este documento chamava, por engano, o `SuppliesReserved` — que por sua vez também deixou de existir. |
+| `PartsUnavailable` | **renomeado** para `SuppliesUnavailable`, alinhando com o vocabulário `supplies`. O payload não mudou: é `missingSupplies` com `supplyId`, `name`, `requested` e `available`, exatamente como o código sempre emitiu. |
+| `PartsReserved` | nunca existiu no código: era como este documento chamava, por engano, o `SuppliesReserved`, que por sua vez também deixou de existir. |
 
 Não há, e nunca houve, `DiagnosisStarted`: o mecânico não assume a OS num passo separado. Ele a pega da fila e conclui o diagnóstico numa chamada só, e é aí que o `diagnosedBy` é capturado.
 

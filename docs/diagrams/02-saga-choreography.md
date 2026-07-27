@@ -1,7 +1,11 @@
-# 02 — Saga Coreografada
+# 02. Saga Coreografada
 
 Como a saga do Auto Repair Shop se comporta: quem publica cada evento, quem reage,
 e o que acontece em cada caminho de rollback.
+
+> Este documento é a vista visual da saga. A norma (envelope, topologia, payloads,
+> convenções e máquinas de estado) vive em [`saga-event-contract.md`](../saga-event-contract.md).
+> Mudança de evento começa lá.
 
 ## Sobre a notação
 
@@ -20,7 +24,7 @@ saga**. Cada serviço deriva o próprio estado dos eventos que recebe, e o "esta
 só existe como a composição dos três.
 
 > **Atenção ao ler os diagramas:** as setas indicam quem **reage** a cada evento, não a
-> topologia de assinatura. Fisicamente a malha é completa — a fila de cada serviço assina
+> topologia de assinatura. Fisicamente a malha é completa: a fila de cada serviço assina
 > os tópicos dos outros dois por inteiro, recebe um superset e **descarta por `eventType`
 > o que não trata**. A única assinatura filtrada é a da Lambda de e-mail.
 
@@ -39,25 +43,9 @@ O order não conhece catálogo nem preço. Recebe os itens já precificados pelo
 
 Duas ações do mecânico movem a saga e não são eventos: `finish-diagnosis`, que resolve
 preços e reserva estoque, e `start`, que tira a OS da fila. Coreografia não quer dizer que
-tudo seja assíncrono — quer dizer que ninguém orquestra.
+tudo seja assíncrono, e sim que ninguém orquestra.
 
 ## Matriz de publicação e escuta
-
-| Evento | Publica | Reage | Efeito no consumidor |
-|---|---|---|---|
-| `OrderCreated` | order | execution | enfileira a OS para diagnóstico |
-| `DiagnoseFinished` | execution | order | grava os itens precificados, OS aguardando aprovação |
-| `OrderAwaitingApproval` | order | billing | cria a quote e pede o e-mail |
-| `SuppliesUnavailable` | execution | order | cancela a OS |
-| `QuoteEmailRequested` | billing | Lambda de e-mail | envia orçamento com Aprovar/Recusar |
-| `QuoteApproved` | billing | Lambda de e-mail | envia link de pagamento |
-| `QuoteRejected` | billing | execution, order | libera reserva / cancela a OS |
-| `PaymentConfirmed` | billing | execution, order | enfileira a execução / OS enfileirada |
-| `PaymentFailed` | billing | execution, order | libera reserva / cancela a OS |
-| `ExecutionStarted` | execution | order | OS em andamento |
-| `ExecutionFinished` | execution | order | conclui a OS |
-| `ExecutionFailed` | execution | billing, order | estorna o pagamento / cancela a OS |
-| `ReservationExpired` | execution | order | cancela a OS |
 
 ```mermaid
 flowchart LR
@@ -93,12 +81,12 @@ flowchart LR
 ```
 
 Linha cheia é caminho de avanço; tracejada em vermelho é compensação. São 17 setas: os
-índices 0–8 são o avanço e 9–16 as compensações — o `linkStyle` conta a partir de 0, na
+índices 0–8 são o avanço e 9–16 as compensações. O `linkStyle` conta a partir de 0, na
 ordem em que as setas aparecem no código, e recontar é obrigatório sempre que uma seta
 entra ou sai.
 
 O ciclo `order → execution → order → billing` é o coração do desenho: o execution devolve
-ao order o resultado do diagnóstico, e é o order — dono da OS — que anuncia ao billing que
+ao order o resultado do diagnóstico, e é o order, dono da OS, que anuncia ao billing que
 há orçamento a montar. O billing nunca escuta o execution no caminho feliz.
 
 ## Fluxo feliz
@@ -157,7 +145,7 @@ sequenceDiagram
 ```
 
 O `PaymentConfirmed` **para** em `ENQUEUED`: quem avança para `IN_PROGRESS` é o `/start`,
-chamado pelo mecânico. Sem essa separação a fila não existiria — o estado enfileirado nunca
+chamado pelo mecânico. Sem essa separação a fila não existiria: o estado enfileirado nunca
 seria persistido e a consulta por status voltaria vazia.
 
 O redirect 302 e o e-mail 2 levam **a mesma URL**. O e-mail existe para quem fecha a aba
@@ -173,7 +161,7 @@ efeito já aplicado. São cinco caminhos.
 ### 1. Insumo indisponível
 
 Falha no fechamento do diagnóstico, antes de existir orçamento. Nada a compensar além da
-própria OS — nenhuma reserva chegou a ser criada.
+própria OS, porque nenhuma reserva chegou a ser criada.
 
 ```mermaid
 sequenceDiagram
@@ -191,9 +179,9 @@ sequenceDiagram
 ```
 
 **Decisão registrada:** com o diagnóstico síncrono, o mecânico está na frente do computador
-e responder só um erro — mantendo a OS aberta para nova tentativa — seria mais proporcional
+e responder só um erro, mantendo a OS aberta para nova tentativa, seria mais proporcional
 do que cancelar o atendimento inteiro porque faltou um filtro. Foi avaliado e recusado: o
-comportamento de cancelar permanece. O `finish-diagnosis` faz as duas coisas — informa o
+comportamento de cancelar permanece. O `finish-diagnosis` faz as duas coisas: informa o
 mecânico, com nome e quantidades do que faltou, **e** publica o evento de cancelamento.
 
 ### 2. Cliente recusa o orçamento
@@ -236,7 +224,7 @@ sequenceDiagram
     Note over Order: CANCELED
 ```
 
-Idêntico ao anterior do ponto de vista do execution — mesma compensação, gatilho diferente.
+Idêntico ao anterior do ponto de vista do execution: mesma compensação, gatilho diferente.
 Vale para a reserva tanto em `RESERVED` quanto em `ENQUEUED`.
 
 ### 4. Falha durante a execução (com pagamento já feito)
@@ -263,7 +251,7 @@ sequenceDiagram
 
 O `paymentId` só existe porque o execution o guardou ao processar o `PaymentConfirmed`.
 Com a remoção do estado `DIAGNOSED`, a falha transiciona apenas a partir de `IN_PROGRESS`,
-estado só alcançável depois da confirmação do pagamento — então o campo está sempre
+estado só alcançável depois da confirmação do pagamento, então o campo está sempre
 presente aqui, e o estorno nunca fica sem destino.
 
 ### 5. Reserva expirada
@@ -281,109 +269,10 @@ sequenceDiagram
     Note over Order: CANCELED
 ```
 
-## Estado derivado por serviço
-
-Não há estado central. Cada serviço mantém o seu, e a saga é a composição dos três.
-
-### order
-
-```mermaid
-stateDiagram-v2
-    [*] --> RECEIVED: OS criada, aguardando diagnóstico
-    RECEIVED --> WAITING_APPROVAL: DiagnoseFinished
-    WAITING_APPROVAL --> EXECUTION_ENQUEUED: PaymentConfirmed
-    EXECUTION_ENQUEUED --> IN_PROGRESS: ExecutionStarted
-    IN_PROGRESS --> COMPLETED: ExecutionFinished
-    COMPLETED --> DELIVERED: retirada pelo cliente
-    RECEIVED --> CANCELED: SuppliesUnavailable
-    WAITING_APPROVAL --> CANCELED: QuoteRejected / PaymentFailed / ReservationExpired
-    EXECUTION_ENQUEUED --> CANCELED: ExecutionFailed
-    IN_PROGRESS --> CANCELED: ExecutionFailed
-    CANCELED --> [*]
-    DELIVERED --> [*]
-```
-
-Não há `IN_DIAGNOSIS`: sem evento de início de diagnóstico, não há gatilho, e `RECEIVED` já
-significa "aguardando diagnóstico". `CANCELED` é alcançável de **qualquer** estado não
-terminal; o diagrama mostra as origens que ocorrem na prática. `ExecutionStarted` deixou de
-ser só log e agora move `EXECUTION_ENQUEUED → IN_PROGRESS`.
-
-A coluna órfã `orders.technician` é derrubada; quem abriu e quem diagnosticou passam a ser
-`openedBy` e `diagnosedBy`, ambos preenchidos a partir do JWT.
-
-### billing (Quote)
-
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING_APPROVAL: OrderAwaitingApproval
-    PENDING_APPROVAL --> APPROVED: link /approve + preferência criada
-    PENDING_APPROVAL --> REJECTED: link /decline
-    APPROVED --> PAID: webhook aprovado
-    APPROVED --> PAYMENT_FAILED: webhook recusado
-    PAID --> REFUNDED: ExecutionFailed
-    REJECTED --> [*]
-    PAYMENT_FAILED --> [*]
-    REFUNDED --> [*]
-```
-
-Única mudança em relação ao desenho anterior: o gatilho de criação da quote passou de
-`SuppliesReserved` para `OrderAwaitingApproval`. A máquina em si é a mesma.
-
-### execution
-
-```mermaid
-stateDiagram-v2
-    [*] --> AWAITING_DIAGNOSIS: OrderCreated
-    AWAITING_DIAGNOSIS --> RESERVED: finish-diagnosis, preços + reserva
-    RESERVED --> ENQUEUED: PaymentConfirmed
-    ENQUEUED --> IN_PROGRESS: POST /v1/orders/{id}/start
-    IN_PROGRESS --> COMPLETED: POST /v1/orders/{id}/finish
-    IN_PROGRESS --> FAILED: POST /v1/orders/{id}/fail
-    AWAITING_DIAGNOSIS --> CANCELED: estoque insuficiente
-    RESERVED --> CANCELED: QuoteRejected / PaymentFailed
-    ENQUEUED --> CANCELED: QuoteRejected / PaymentFailed
-    COMPLETED --> [*]
-    FAILED --> [*]
-    CANCELED --> [*]
-```
-
-O estado `DIAGNOSED` foi removido: ele existia entre `IN_PROGRESS` e `COMPLETED`, ou seja,
-**depois** do pagamento, e nunca correspondeu a um diagnóstico de verdade.
-
-`ENQUEUED` passa a existir de fato. As transições de enfileiramento e de início eram feitas
-numa expressão só, então o estado nunca era persistido e a consulta por status devolvia
-lista vazia. Separá-las é o que transforma a fila de execução em algo consultável.
-
-O execution diz `ENQUEUED` onde o order diz `EXECUTION_ENQUEUED` — mesmo instante,
-vocabulários de domínios diferentes. O nome do status da OS diz **o que** está enfileirado,
-para quem lê a OS do cliente. Não é divergência acidental e não deve ser "corrigido".
-
-## Garantias de entrega
-
-**Outbox.** Mudança de estado e evento são gravados na mesma transação. Um relay publica
-no SNS depois do commit e reprocessa pendentes, então nenhum evento se perde por falha de
-publicação.
-
-**Idempotência.** Deduplicação por `(orderId, eventId)`. Além disso os handlers são
-idempotentes por estado: transição terminal não reprocessa.
-
-**Redrive.** Cada fila tem DLQ com `maxReceiveCount = 3` e `visibility_timeout = 60s`.
-Handler que estoura exceção não deleta a mensagem — ela volta e, após três tentativas, cai
-na DLQ.
-
-**Ordem.** Não há garantia de ordem entre eventos de tópicos diferentes. O desenho não
-depende disso: cada transição é validada contra o estado atual, e evento fora de ordem é
-rejeitado pela máquina de estados em vez de corromper o fluxo.
-
-**Deploy.** Os eventos viajam em tópicos que já existem — a malha é completa e sem filtro
-por evento, então nenhum deploy de infra precede um deploy de aplicação. A ordem
-execution → order → billing importa só para a saga não travar: durante a janela as
-mensagens ficam na fila e são reprocessadas.
-
 ## Lacunas conhecidas
 
 **A recusa do orçamento não tem prazo próprio.** Se o cliente simplesmente ignora o
-e-mail, quem encerra a saga é o `ReservationExpired`, pelo TTL da reserva — não pelo TTL do
+e-mail, quem encerra a saga é o `ReservationExpired`, pelo TTL da reserva, não pelo TTL do
 token de aprovação.
 
 **O diagnóstico não tem prazo.** Uma OS que fica em `RECEIVED` porque ninguém rodou o

@@ -1,4 +1,4 @@
-# 01 — Component Overview
+# 01. Component Overview
 
 Visão de alto nível dos componentes do Auto Repair Shop na AWS.
 

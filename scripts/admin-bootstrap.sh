@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# admin-bootstrap.sh — cria um usuário admin no DB (idempotente)
+# admin-bootstrap.sh: cria um usuário admin no DB (idempotente)
 # para uso futuro no login da API.
 #
 # Uso:

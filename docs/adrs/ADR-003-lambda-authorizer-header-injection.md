@@ -1,6 +1,6 @@
 # ADR-003 — Lambda Authorizer injeta headers; app não revalida JWT
 
-**Status:** Aceito — 2026-05-25
+**Status:** Aceito em 2026-05-25
 
 ## Contexto
 
@@ -8,11 +8,11 @@ O JWT é assinado pelo Lambda login com um segredo `JWT_HMAC` por ambiente. Toda
 
 ## Decisão
 
-O Authorizer retorna `{ userId, role, cpf }` no contexto da resposta. O API Gateway injeta esses valores como `X-User-Id` e `X-User-Role` usando `overwrite:`, impedindo que clientes externos enviem esses headers diretamente. O app lê os headers e confia — sem conhecer o segredo JWT nem revalidar a assinatura.
+O Authorizer retorna `{ userId, role, cpf }` no contexto da resposta. O API Gateway injeta esses valores como `X-User-Id` e `X-User-Role` usando `overwrite:`, impedindo que clientes externos enviem esses headers diretamente. O app lê os headers e confia, sem conhecer o segredo JWT nem revalidar a assinatura.
 
 ## Consequências
 
-- App não precisa do `JWT_HMAC` — superfície de ataque reduzida
+- App não precisa do `JWT_HMAC`, o que reduz a superfície de ataque
 - Cache de resultado do Authorizer (5 min) reduz invocações Lambda; revalidar no app seria overhead desperdiçado
 - Mudar o formato de claims exige redeploy do Lambda e da configuração de integração no API Gateway
-- Rotas públicas (aprovação de orçamento pelo cliente) não recebem os headers — usam token UUID single-use no banco como credencial
+- Rotas públicas (aprovação de orçamento pelo cliente) não recebem os headers; usam token UUID single-use no banco como credencial

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# grafana-tunnel.sh — abre port-forward para o Grafana do cluster EKS
+# grafana-tunnel.sh: abre port-forward para o Grafana do cluster EKS
 #
 # Uso:
 #   ./scripts/grafana-tunnel.sh [prod|hml]
@@ -35,13 +35,13 @@ ADMIN_PASS=$(kubectl get secret -n observability kube-prometheus-stack-grafana \
 cat <<EOF
 
 ╔═══════════════════════════════════════════════════════════════════
-║  Grafana ($ENV) — http://localhost:$LOCAL_PORT
+║  Grafana ($ENV) em http://localhost:$LOCAL_PORT
 ║  login: admin / $ADMIN_PASS
 ╠═══════════════════════════════════════════════════════════════════
 ║  Pasta "Auto Repair Shop":
 ║
 ║    Orders Operations      /d/auto-repair-orders-ops
-║      status da OS ao longo do fluxo — painel principal
+║      status da OS ao longo do fluxo (painel principal)
 ║    Execution Saga         /d/auto-repair-execution-saga
 ║      fila da oficina, reservas, insumo indisponível
 ║    APM por serviço        /d/auto-repair-apm

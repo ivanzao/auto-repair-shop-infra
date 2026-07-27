@@ -19,6 +19,6 @@ output "cluster_sg_id" {
 }
 
 output "node_group_asg_names" {
-  description = "ASG names for the default node group — used for NLB target registration"
+  description = "ASG names for the default node group, used for NLB target registration"
   value       = flatten([for r in aws_eks_node_group.default.resources : r.autoscaling_groups[*].name])
 }

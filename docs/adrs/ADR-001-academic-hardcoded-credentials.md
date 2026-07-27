@@ -1,6 +1,6 @@
 # ADR-001 — Credenciais padrão no contexto acadêmico
 
-**Status:** Aceito — 2026-05-18
+**Status:** Aceito em 2026-05-18
 
 ## Contexto
 
@@ -8,7 +8,7 @@ Grafana e seu banco no RDS precisam de credenciais. Operacionalizar rotação (E
 
 ## Decisão
 
-Senhas padrão (`admin`) como defaults nas variáveis Terraform. As strings não aparecem em nenhum arquivo commitado — vivem apenas nos defaults das variáveis. O RDS em ambos os ambientes tem `skip_final_snapshot = true` (não há dados a preservar).
+Senhas padrão (`admin`) como defaults nas variáveis Terraform. As strings não aparecem em nenhum arquivo commitado; vivem apenas nos defaults das variáveis. O RDS em ambos os ambientes tem `skip_final_snapshot = true` (não há dados a preservar).
 
 ## Consequências
 
