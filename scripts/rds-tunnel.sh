@@ -79,7 +79,7 @@ kubectl run "$POD_NAME" \
   --image=alpine/socat \
   --restart=Never \
   --namespace="$NAMESPACE" \
-  -- socat TCP-LISTEN:"$RDS_PORT",fork TCP:"$RDS_HOST":"$RDS_PORT" >/dev/null 2>&1
+  -- TCP-LISTEN:"$RDS_PORT",fork,reuseaddr TCP:"$RDS_HOST":"$RDS_PORT" >/dev/null 2>&1
 
 echo "→ aguardando pod ficar Ready..."
 kubectl wait pod "$POD_NAME" \
