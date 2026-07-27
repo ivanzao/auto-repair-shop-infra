@@ -5,16 +5,6 @@ locals {
       route_key = "GET /${svc}/health"
       overwrite = "/health"
     } },
-    { for svc in keys(local.services) : "${svc}_swagger_root" => {
-      service   = svc
-      route_key = "GET /${svc}/swagger"
-      overwrite = "/swagger"
-    } },
-    { for svc in keys(local.services) : "${svc}_swagger" => {
-      service   = svc
-      route_key = "GET /${svc}/swagger/{proxy+}"
-      overwrite = "/swagger/$request.path.proxy"
-    } },
     {
       billing_quote_approve = { service = "billing", route_key = "GET /billing/v1/quotes/approve", overwrite = "/v1/quotes/approve" }
       billing_quote_decline = { service = "billing", route_key = "GET /billing/v1/quotes/decline", overwrite = "/v1/quotes/decline" }
